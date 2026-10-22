@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:task_tracker/data/in_memory_task_repository.dart';
+import 'package:task_tracker/data/task_store.dart';
 import 'package:task_tracker/main.dart';
 import 'package:task_tracker/theme/theme_controller.dart';
 
 void main() {
   testWidgets('App starts on Home and can navigate to Tasks and Profile',
       (WidgetTester tester) async {
-    await tester.pumpWidget(TaskTrackerApp(themeController: ThemeController()));
+    // Use the in-memory repository rather than the real SQLite one, so
+    // this test doesn't depend on a native sqlite3 library being present
+    // on the test host.
+    await tester.pumpWidget(TaskTrackerApp(
+      themeController: ThemeController(),
+      taskStore: TaskStore(repository: InMemoryTaskRepository()),
+    ));
+    await tester.pumpAndSettle();
 
     expect(find.text('Home'), findsWidgets);
 

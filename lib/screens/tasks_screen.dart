@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 
-import '../data/mock_tasks.dart';
-import '../models/task.dart';
+import '../data/task_store_scope.dart';
+import '../navigation/app_nav_controller.dart';
+import '../navigation/app_nav_scope.dart';
+import '../utils/sort_tasks.dart';
 import '../widgets/task_card.dart';
 import '../widgets/task_filter_bar.dart';
+import 'task_detail_screen.dart';
 
 /// Full task list with the horizontal filter bar on top.
 ///
 /// Filtering is intentionally simple right now: one active filter at a
-/// time, mixing assignment ("Assigned to me" / "Created by me") and
-/// category into a single row. This is the first iteration — multi-select,
-/// search, and sorting are natural next steps once the design settles.
+/// time, mixing assignment ("Assigned to me" / "Mine") and category into a
+/// single row. This is the first iteration — multi-select, search, and
+/// sorting are natural next steps once the design settles.
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
 
@@ -19,38 +22,79 @@ class TasksScreen extends StatefulWidget {
 }
 
 class _TasksScreenState extends State<TasksScreen> {
-  late List<Task> _tasks;
   TaskFilter _selected = const TaskFilter.all();
+  AppNavController? _navController;
 
   @override
-  void initState() {
-    super.initState();
-    _tasks = List.of(mockTasks);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Pick up a filter requested from Home's summary cards (see
+    // AppNavController.goToTasksTab). This screen stays alive in the
+    // IndexedStack, so the listener added here persists across tab
+    // switches without being re-added.
+    final controller = AppNavScope.of(context);
+    if (_navController != controller) {
+      _navController?.removeListener(_handleNavChange);
+      _navController = controller;
+      _navController!.addListener(_handleNavChange);
+      _applyPendingFilter();
+    }
   }
 
-  List<TaskFilter> get _filters {
-    final categories = _tasks.map((t) => t.category).toSet().toList()..sort();
-    return [
-      const TaskFilter.all(),
-      const TaskFilter.assignment(TaskAssignment.assignedToMe, 'Assigned to me'),
-      const TaskFilter.assignment(TaskAssignment.createdByMe, 'Created by me'),
-      for (final category in categories) TaskFilter.category(category, category),
-    ];
+  @override
+  void dispose() {
+    _navController?.removeListener(_handleNavChange);
+    super.dispose();
+  }
+
+  void _handleNavChange() {
+    _applyPendingFilter();
+    setState(() {}); // also covers the back-button visibility changing
+  }
+
+  void _applyPendingFilter() {
+    final filter = _navController?.consumePendingTasksFilter();
+    if (filter != null) {
+      setState(() => _selected = filter);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _tasks.where(_selected.matches).toList()
-      ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
+    final store = TaskStoreScope.of(context);
+    final nav = AppNavScope.of(context);
+
+    if (store.isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final allTasks = store.tasks;
+    final categories = allTasks.expand((t) => t.categories).toSet().toList()..sort();
+    final filters = [
+      const TaskFilter.all(),
+      const TaskFilter.assignedToMe(),
+      const TaskFilter.mine(),
+      for (final category in categories) TaskFilter.category(category, category),
+    ];
+
+    final filtered = sortByDeadline(allTasks.where(_selected.matches).toList());
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tasks')),
+      appBar: AppBar(
+        title: const Text('Tasks'),
+        leading: nav.tasksTabHasBackButton
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => nav.setTabIndex(0),
+              )
+            : null,
+      ),
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 8, bottom: 4),
             child: TaskFilterBar(
-              filters: _filters,
+              filters: filters,
               selected: _selected,
               onSelected: (filter) => setState(() => _selected = filter),
             ),
@@ -66,12 +110,12 @@ class _TasksScreenState extends State<TasksScreen> {
                       final task = filtered[index];
                       return TaskCard(
                         task: task,
-                        onToggleCompleted: (value) {
-                          setState(() {
-                            final i = _tasks.indexWhere((t) => t.id == task.id);
-                            _tasks[i] = _tasks[i].copyWith(completed: value);
-                          });
-                        },
+                        onToggle: () => store.quickToggle(task),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => TaskDetailScreen(taskId: task.id!),
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -79,12 +123,9 @@ class _TasksScreenState extends State<TasksScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: wire up task creation once the backend is in place.
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Add task — coming soon')),
-          );
-        },
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const TaskDetailScreen(taskId: null)),
+        ),
         child: const Icon(Icons.add),
       ),
     );

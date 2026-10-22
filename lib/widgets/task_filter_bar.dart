@@ -4,8 +4,8 @@ import '../models/task.dart';
 
 /// One entry in the horizontal filter bar.
 ///
-/// `assignment == null` means "an 'All' chip" or a category chip — anything
-/// that isn't filtering by [TaskAssignment].
+/// `assignment == null` means "an 'All' chip" or a category chip —
+/// anything that isn't filtering by [TaskAssignment].
 class TaskFilter {
   final String label;
   final TaskAssignment? assignment;
@@ -16,13 +16,24 @@ class TaskFilter {
         assignment = null,
         category = null;
 
-  const TaskFilter.assignment(this.assignment, this.label) : category = null;
+  /// Tasks delegated to the current user by someone else.
+  const TaskFilter.assignedToMe()
+      : label = 'Assigned to me',
+        assignment = TaskAssignment.assignedToMe,
+        category = null;
+
+  /// Tasks the current user created/owns (self tasks and ones delegated
+  /// to someone else).
+  const TaskFilter.mine()
+      : label = 'Mine',
+        assignment = TaskAssignment.mine,
+        category = null;
 
   const TaskFilter.category(this.category, this.label) : assignment = null;
 
   bool matches(Task task) {
     if (assignment != null) return task.assignment == assignment;
-    if (category != null) return task.category == category;
+    if (category != null) return task.categories.contains(category);
     return true; // "All"
   }
 
@@ -41,10 +52,10 @@ class TaskFilter {
 /// Tasks screen.
 ///
 /// Today this mixes two kinds of filters — assignment (Assigned to me /
-/// Created by me) and category — in a single row, separated by a divider.
-/// This is intentionally simple for now; as the idea gets expanded (e.g.
-/// separate rows, multi-select categories, saved filter sets) this widget
-/// is the place to grow.
+/// Mine) and category — in a single row, separated by a divider. This is
+/// intentionally simple for now; as the idea gets expanded (e.g. separate
+/// rows, multi-select categories, saved filter sets) this widget is the
+/// place to grow.
 class TaskFilterBar extends StatelessWidget {
   final List<TaskFilter> filters;
   final TaskFilter selected;

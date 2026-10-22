@@ -1,39 +1,61 @@
 import 'package:flutter/material.dart';
 
 import '../models/task.dart';
+import '../models/task_status.dart';
+import '../utils/date_format.dart';
+import '../utils/task_permissions.dart';
+import '../utils/task_urgency.dart';
 
-/// A single row in the task list.
+/// A single row in a task list.
+///
+/// Background color signals how pressing the deadline is — see
+/// `task_urgency.dart` — so it's set directly on the [Card], overriding
+/// the theme's usual surface color except for [TaskUrgency.normal], which
+/// falls back to it.
 class TaskCard extends StatelessWidget {
   final Task task;
-  final ValueChanged<bool?>? onToggleCompleted;
+
+  /// Called when the quick-toggle checkbox is tapped. What it actually
+  /// does depends on the current user's role on the task — see
+  /// `task_permissions.dart` — so this is a plain trigger, not a value
+  /// callback; the caller (via `TaskStore.quickToggle`) decides the result.
+  final VoidCallback? onToggle;
+
+  final VoidCallback? onTap;
 
   const TaskCard({
     super.key,
     required this.task,
-    this.onToggleCompleted,
+    this.onToggle,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isOverdue =
-        !task.completed && task.dueDate.isBefore(DateTime.now());
+    final urgency = urgencyOf(task);
+    final colors = urgencyColors(urgency, theme.brightness);
+    final showStatusChip = task.status != TaskStatus.pending && task.status != TaskStatus.completed;
 
     return Card(
+      color: colors?.background,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: ListTile(
+        onTap: onTap,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         leading: Checkbox(
-          value: task.completed,
-          onChanged: onToggleCompleted,
+          tristate: true,
+          value: quickToggleValue(task),
+          onChanged: onToggle == null ? null : (_) => onToggle!(),
         ),
         title: Text(
           task.title,
           style: theme.textTheme.titleMedium?.copyWith(
-            decoration: task.completed ? TextDecoration.lineThrough : null,
-            color: task.completed
-                ? theme.colorScheme.onSurfaceVariant
-                : theme.colorScheme.onSurface,
+            decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+            color: colors?.onBackground ??
+                (task.isCompleted
+                    ? theme.colorScheme.onSurfaceVariant
+                    : theme.colorScheme.onSurface),
           ),
         ),
         subtitle: Column(
@@ -47,32 +69,19 @@ class TaskCard extends StatelessWidget {
                   task.description,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: colors?.onBackground),
                 ),
               ),
             Wrap(
               spacing: 8,
               runSpacing: 4,
               children: [
-                Chip(
-                  label: Text(task.category),
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                ),
-                Icon(
-                  Icons.schedule,
-                  size: 14,
-                  color: isOverdue
-                      ? theme.colorScheme.error
-                      : theme.colorScheme.onSurfaceVariant,
-                ),
+                for (final category in task.categories) _Tag(category, colors),
+                if (showStatusChip) _Tag(task.status.label, colors),
+                Icon(Icons.schedule, size: 14, color: colors?.onBackground ?? theme.colorScheme.onSurfaceVariant),
                 Text(
-                  _formatDueDate(task.dueDate),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: isOverdue
-                        ? theme.colorScheme.error
-                        : theme.colorScheme.onSurfaceVariant,
-                  ),
+                  task.dueAt == null ? 'No due date' : formatDateTime(task.dueAt!),
+                  style: theme.textTheme.bodySmall?.copyWith(color: colors?.onBackground),
                 ),
               ],
             ),
@@ -81,17 +90,23 @@ class TaskCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  String _formatDueDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = date.difference(now);
+class _Tag extends StatelessWidget {
+  final String label;
+  final TaskUrgencyColors? colors;
 
-    if (difference.isNegative) {
-      return 'Overdue';
-    }
-    if (difference.inHours < 24) {
-      return 'Due in ${difference.inHours}h';
-    }
-    return 'Due in ${difference.inDays}d';
+  const _Tag(this.label, this.colors);
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      label: Text(label),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      backgroundColor: colors?.onBackground.withValues(alpha: 0.15),
+      labelStyle: colors == null ? null : TextStyle(color: colors!.onBackground),
+    );
   }
 }
