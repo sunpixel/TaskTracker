@@ -1,0 +1,93 @@
+import 'package:flutter/material.dart';
+
+import '../models/task.dart';
+
+/// One entry in the horizontal filter bar.
+///
+/// `assignment == null` means "an 'All' chip" or a category chip — anything
+/// that isn't filtering by [TaskAssignment].
+class TaskFilter {
+  final String label;
+  final TaskAssignment? assignment;
+  final String? category;
+
+  const TaskFilter.all()
+      : label = 'All',
+        assignment = null,
+        category = null;
+
+  const TaskFilter.assignment(this.assignment, this.label) : category = null;
+
+  const TaskFilter.category(this.category, this.label) : assignment = null;
+
+  bool matches(Task task) {
+    if (assignment != null) return task.assignment == assignment;
+    if (category != null) return task.category == category;
+    return true; // "All"
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is TaskFilter &&
+      other.label == label &&
+      other.assignment == assignment &&
+      other.category == category;
+
+  @override
+  int get hashCode => Object.hash(label, assignment, category);
+}
+
+/// Horizontally scrollable row of filter chips sitting at the top of the
+/// Tasks screen.
+///
+/// Today this mixes two kinds of filters — assignment (Assigned to me /
+/// Created by me) and category — in a single row, separated by a divider.
+/// This is intentionally simple for now; as the idea gets expanded (e.g.
+/// separate rows, multi-select categories, saved filter sets) this widget
+/// is the place to grow.
+class TaskFilterBar extends StatelessWidget {
+  final List<TaskFilter> filters;
+  final TaskFilter selected;
+  final ValueChanged<TaskFilter> onSelected;
+
+  const TaskFilterBar({
+    super.key,
+    required this.filters,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: filters.length,
+        separatorBuilder: (context, index) {
+          // Visually split the assignment group from the category group.
+          final isGroupBoundary = filters[index].category == null &&
+              index + 1 < filters.length &&
+              filters[index + 1].category != null;
+          if (isGroupBoundary) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: VerticalDivider(width: 1, indent: 8, endIndent: 8),
+            );
+          }
+          return const SizedBox(width: 8);
+        },
+        itemBuilder: (context, index) {
+          final filter = filters[index];
+          final isSelected = filter == selected;
+          return ChoiceChip(
+            label: Text(filter.label),
+            selected: isSelected,
+            onSelected: (_) => onSelected(filter),
+          );
+        },
+      ),
+    );
+  }
+}
