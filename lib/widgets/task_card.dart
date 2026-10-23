@@ -39,6 +39,15 @@ class TaskCard extends StatelessWidget {
 
     return Card(
       color: colors?.background,
+      // Normal-urgency tasks get no background override, which otherwise
+      // leaves them a plain card barely distinct from the page behind
+      // it — give those a visible outline instead.
+      shape: colors == null
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: theme.colorScheme.outlineVariant, width: 1.5),
+            )
+          : null,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: ListTile(
         onTap: onTap,

@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:task_tracker/data/in_memory_task_repository.dart';
@@ -20,11 +19,13 @@ void main() {
 
     expect(find.text('Home'), findsWidgets);
 
-    await tester.tap(find.widgetWithText(NavigationDestination, 'Tasks'));
+    // Tapped by label text rather than widget type since the bottom bar
+    // is a custom AnimatedNavBar, not the stock NavigationBar/Destination.
+    await tester.tap(find.text('Tasks'));
     await tester.pumpAndSettle();
     expect(find.text('Tasks'), findsWidgets);
 
-    await tester.tap(find.widgetWithText(NavigationDestination, 'Profile'));
+    await tester.tap(find.text('Profile'));
     await tester.pumpAndSettle();
     expect(find.text('Profile'), findsWidgets);
     expect(find.text('Appearance'), findsOneWidget);

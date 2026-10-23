@@ -9,7 +9,8 @@ enum TaskUrgency {
   /// Due within 6 hours (but not within the hour).
   urgent,
 
-  /// Due on tomorrow's calendar date.
+  /// Due on tomorrow's calendar date. Colored yellow — a clearer "heads
+  /// up" signal than the blue this used to be.
   dueTomorrow,
 
   /// Due within the next 7 calendar days (but not tomorrow).
@@ -58,22 +59,22 @@ class TaskUrgencyColors {
 TaskUrgencyColors? urgencyColors(TaskUrgency urgency, Brightness brightness) {
   final dark = brightness == Brightness.dark;
   switch (urgency) {
-    case TaskUrgency.critical: // dark red
+    case TaskUrgency.critical: // strong red — most alarming
       return dark
           ? const TaskUrgencyColors(Color(0xFF601410), Color(0xFFFFDAD6))
-          : const TaskUrgencyColors(Color(0xFFB3261E), Color(0xFFFFFFFF));
-    case TaskUrgency.urgent: // light red
+          : const TaskUrgencyColors(Color(0xFFE57373), Color(0xFF3B0000));
+    case TaskUrgency.urgent: // orange — distinct hue from critical's red
       return dark
-          ? const TaskUrgencyColors(Color(0xFF4A2626), Color(0xFFFFDAD6))
-          : const TaskUrgencyColors(Color(0xFFFFDAD6), Color(0xFF410E0B));
-    case TaskUrgency.dueTomorrow: // blue
+          ? const TaskUrgencyColors(Color(0xFF4A2E00), Color(0xFFFFCC80))
+          : const TaskUrgencyColors(Color(0xFFFFB74D), Color(0xFF4A2800));
+    case TaskUrgency.dueTomorrow: // yellow
       return dark
-          ? const TaskUrgencyColors(Color(0xFF163A5F), Color(0xFFD3E4FF))
-          : const TaskUrgencyColors(Color(0xFFD3E4FF), Color(0xFF001C3B));
+          ? const TaskUrgencyColors(Color(0xFF4A3B00), Color(0xFFFFE082))
+          : const TaskUrgencyColors(Color(0xFFFFCA28), Color(0xFF4A3800));
     case TaskUrgency.dueThisWeek: // green
       return dark
           ? const TaskUrgencyColors(Color(0xFF1E4620), Color(0xFFC2F2C3))
-          : const TaskUrgencyColors(Color(0xFFC2F2C3), Color(0xFF002204));
+          : const TaskUrgencyColors(Color(0xFF81C784), Color(0xFF0B3D0F));
     case TaskUrgency.normal:
       return null;
   }
