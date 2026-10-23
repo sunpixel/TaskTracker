@@ -38,6 +38,13 @@ dependencies:
   sqflite_common_ffi: ^2.4.0+3
   path: ^1.9.1
   add_2_calendar: ^3.0.1
+  flutter_local_notifications: ^22.3.2
+  timezone: ^0.11.2
+  # flutter_local_notifications_web needs this, but doesn't declare it
+  # itself — without an explicit direct dependency here, the web build's
+  # generated plugin registrant fails to resolve it.
+  flutter_web_plugins:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:

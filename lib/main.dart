@@ -6,6 +6,7 @@ import 'data/user_store.dart';
 import 'data/user_store_scope.dart';
 import 'navigation/app_nav_controller.dart';
 import 'navigation/app_nav_scope.dart';
+import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
 import 'widgets/main_scaffold.dart';
@@ -42,6 +43,19 @@ class _TaskTrackerAppState extends State<TaskTrackerApp> {
     super.initState();
     _taskStore.load();
     _userStore.load();
+    _initNotifications();
+  }
+
+  /// Best-effort — a missing platform implementation (e.g. under
+  /// `flutter test`, which has no plugin channel mocked) must never
+  /// block the rest of the app from starting.
+  Future<void> _initNotifications() async {
+    try {
+      await NotificationService.instance.initialize();
+      await NotificationService.instance.requestPermissions();
+    } catch (_) {
+      // See above.
+    }
   }
 
   @override

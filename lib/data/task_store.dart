@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/task.dart';
+import '../services/notification_service.dart';
+import '../services/server_sync_service.dart';
 import '../utils/task_permissions.dart';
 import 'task_repository.dart';
 
@@ -36,6 +38,7 @@ class TaskStore extends ChangeNotifier {
     final created = await _repository.insert(draft);
     _tasks.add(created);
     notifyListeners();
+    await _syncNotificationsFor(created);
     return created;
   }
 
@@ -48,6 +51,7 @@ class TaskStore extends ChangeNotifier {
       _tasks[index] = task;
       notifyListeners();
     }
+    await _syncNotificationsFor(task);
   }
 
   /// Applies the role-appropriate next status for [task] — see
@@ -56,9 +60,24 @@ class TaskStore extends ChangeNotifier {
     final newStatus = nextStatusOnQuickToggle(task);
     await _repository.updateStatus(task.id!, newStatus);
     final index = _tasks.indexWhere((t) => t.id == task.id);
-    if (index != -1) {
-      _tasks[index] = _tasks[index].copyWith(status: newStatus);
-      notifyListeners();
+    if (index == -1) return;
+    final updated = _tasks[index].copyWith(status: newStatus);
+    _tasks[index] = updated;
+    notifyListeners();
+    await _syncNotificationsFor(updated);
+  }
+
+  /// Reschedules due-date reminders and fires the "assigned to you"
+  /// notification where applicable. Failures here (e.g. no platform
+  /// notification implementation — notably under `flutter test`, which
+  /// has no plugin channel mocked) must never break saving a task, so
+  /// they're swallowed rather than rethrown.
+  Future<void> _syncNotificationsFor(Task task) async {
+    try {
+      await NotificationService.instance.scheduleDueReminders(task);
+      await ServerSyncService.instance.notifyTaskAssigned(task);
+    } catch (_) {
+      // Notifications are a nice-to-have, not critical path.
     }
   }
 }

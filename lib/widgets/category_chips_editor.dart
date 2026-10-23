@@ -12,24 +12,61 @@ class CategoryChipsEditor extends StatelessWidget {
   final bool editable;
   final ValueChanged<List<String>> onChanged;
 
+  /// Categories already used elsewhere (across other tasks), offered as
+  /// one-tap suggestions in the add dialog so reusing one doesn't require
+  /// retyping it.
+  final List<String> suggestions;
+
   const CategoryChipsEditor({
     super.key,
     required this.categories,
     required this.onChanged,
     this.editable = true,
+    this.suggestions = const [],
   });
+
+  bool _alreadyHas(String value) =>
+      categories.any((c) => c.toLowerCase() == value.toLowerCase());
 
   Future<void> _promptAdd(BuildContext context) async {
     final controller = TextEditingController();
+    final reusable = suggestions.where((s) => !_alreadyHas(s)).toList();
+
     final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Add category'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Category name'),
-          onSubmitted: (value) => Navigator.pop(context, value),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (reusable.isNotEmpty) ...[
+                Text('Existing categories', style: Theme.of(context).textTheme.bodySmall),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final existing in reusable)
+                      ActionChip(
+                        label: Text(existing),
+                        onPressed: () => Navigator.pop(context, existing),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text('Or create a new one', style: Theme.of(context).textTheme.bodySmall),
+                const SizedBox(height: 6),
+              ],
+              TextField(
+                controller: controller,
+                autofocus: reusable.isEmpty,
+                decoration: const InputDecoration(hintText: 'Category name'),
+                onSubmitted: (value) => Navigator.pop(context, value),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -45,7 +82,7 @@ class CategoryChipsEditor extends StatelessWidget {
     );
     final trimmed = name?.trim();
     if (trimmed == null || trimmed.isEmpty) return;
-    if (categories.any((c) => c.toLowerCase() == trimmed.toLowerCase())) return;
+    if (_alreadyHas(trimmed)) return;
     onChanged([...categories, trimmed]);
   }
 

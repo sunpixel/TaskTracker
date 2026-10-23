@@ -1,21 +1,32 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../data/current_user.dart';
 import '../data/task_store.dart';
 import '../data/task_store_scope.dart';
+import '../data/user_store.dart';
+import '../data/user_store_scope.dart';
 import '../models/task.dart';
 import '../models/task_status.dart';
 import '../utils/calendar_service.dart';
 import '../utils/date_format.dart';
 import '../utils/task_permissions.dart';
 import '../utils/task_validators.dart';
+import '../widgets/assignee_picker_dialog.dart';
 import '../widgets/category_chips_editor.dart';
+import '../widgets/user_avatar.dart';
 
 /// Single screen for viewing, creating, and editing a task.
 ///
 /// - `taskId == null`: creating a new task — always editable.
 /// - An existing task: editable only by its assigner (`canEdit`); anyone
 ///   else gets a read-only view plus the quick-toggle action.
+///
+/// The assigner is never editable, in either mode — it's fixed to
+/// whoever creates the task (see [_assigner]) and stays that way for its
+/// whole life. Only the assignee can be changed, via a picker drawn from
+/// your contacts (or a typed-in username for someone not in them yet).
 ///
 /// Pushed within the current tab's own [Navigator] (see `MainScaffold`),
 /// so the bottom nav bar stays visible and the back arrow returns to
@@ -37,8 +48,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   late DateTime _createdAt;
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
-  late TextEditingController _assigneeController;
-  late TextEditingController _assignerController;
+
+  /// Fixed at creation — see the class doc. Never reassigned after init.
+  late String? _assigner;
+
+  String? _assignee;
   DateTime? _dueAt;
   TaskStatus _status = TaskStatus.assigned;
   List<String> _categories = [];
@@ -56,10 +70,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     _createdAt = task?.createdAt ?? DateTime.now();
     _titleController = TextEditingController(text: task?.title ?? '');
     _descriptionController = TextEditingController(text: task?.description ?? '');
-    _assigneeController =
-        TextEditingController(text: task?.assignee ?? (_isNew ? currentUserId : ''));
-    _assignerController =
-        TextEditingController(text: task?.assigner ?? (_isNew ? currentUserId : ''));
+    _assigner = task?.assigner ?? currentUserId;
+    _assignee = task?.assignee;
     _dueAt = task?.dueAt;
     _status = task?.status ?? TaskStatus.assigned;
     _categories = List.of(task?.categories ?? const []);
@@ -69,8 +81,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _assigneeController.dispose();
-    _assignerController.dispose();
     super.dispose();
   }
 
@@ -85,8 +95,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         description: _descriptionController.text.trim(),
         createdAt: _createdAt,
         dueAt: _dueAt,
-        assignee: _assigneeController.text.trim().isEmpty ? null : _assigneeController.text.trim(),
-        assigner: _assignerController.text.trim().isEmpty ? null : _assignerController.text.trim(),
+        assignee: _assignee,
+        assigner: _assigner,
         status: _status,
         categories: _categories,
       );
@@ -161,9 +171,34 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     });
   }
 
+  Future<void> _pickAssignee(UserStore userStore) async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AssigneePickerDialog(userStore: userStore),
+    );
+    if (result != null) setState(() => _assignee = result);
+  }
+
+  /// Resolves a stored assignee/assigner id to a display name + avatar,
+  /// using the real logged-in user (for [currentUserId]) or a matching
+  /// contact when one exists — falling back to the raw id as plain text
+  /// for a typed-in username that doesn't match anything locally yet.
+  ({String name, Uint8List? avatar}) _resolvePerson(String? id, UserStore userStore) {
+    if (id == null) return (name: 'Unassigned', avatar: null);
+    if (id == currentUserId) {
+      final me = userStore.currentUser;
+      return (name: me?.displayName ?? 'You', avatar: me?.profilePicture);
+    }
+    for (final contact in userStore.contacts) {
+      if (contact.userName == id) return (name: contact.displayName, avatar: contact.profilePicture);
+    }
+    return (name: id, avatar: null);
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = TaskStoreScope.of(context);
+    final userStore = UserStoreScope.of(context);
     final theme = Theme.of(context);
 
     if (!_isNew && _original == null) {
@@ -175,6 +210,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
     final editable = _editable;
     final draft = _draftTask();
+    final categorySuggestions =
+        store.tasks.expand((t) => t.categories).toSet().toList()..sort();
 
     return Scaffold(
       appBar: AppBar(
@@ -198,6 +235,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           CategoryChipsEditor(
             categories: _categories,
             editable: editable,
+            suggestions: categorySuggestions,
             onChanged: (value) => setState(() => _categories = value),
           ),
           const SizedBox(height: 12),
@@ -240,8 +278,15 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           const SizedBox(height: 16),
           _InfoColumns(
             columns: [
-              ('Assigner', _PersonCell(controller: editable ? _assignerController : null, fallback: _assignerController.text)),
-              ('Assignee', _PersonCell(controller: editable ? _assigneeController : null, fallback: _assigneeController.text)),
+              // Always read-only — the assigner never changes.
+              ('Assigner', _PersonCell(person: _resolvePerson(_assigner, userStore))),
+              (
+                'Assignee',
+                _PersonCell(
+                  person: _resolvePerson(_assignee, userStore),
+                  onTap: editable ? () => _pickAssignee(userStore) : null,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -352,52 +397,40 @@ class _DueDateField extends StatelessWidget {
   }
 }
 
-/// Shows a circular avatar (initials, as a placeholder) above the
-/// person's id — or a text field to edit it, when editable.
+/// Shows a circular avatar above a resolved person's display name.
+/// Tappable (with a small pencil hint) when [onTap] is given — used for
+/// the assignee, which can be changed; the assigner never is.
 class _PersonCell extends StatelessWidget {
-  final TextEditingController? controller;
-  final String fallback;
+  final ({String name, Uint8List? avatar}) person;
+  final VoidCallback? onTap;
 
-  const _PersonCell({required this.controller, required this.fallback});
-
-  static String _initialsFor(String text) {
-    final trimmed = text.trim();
-    if (trimmed.isEmpty) return '?';
-    return trimmed.substring(0, 1).toUpperCase();
-  }
+  const _PersonCell({required this.person, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final avatar = ValueListenableBuilder<TextEditingValue>(
-      valueListenable: controller ?? ValueNotifier(TextEditingValue(text: fallback)),
-      builder: (context, value, _) => CircleAvatar(
-        radius: 14,
-        backgroundColor: theme.colorScheme.primaryContainer,
-        child: Text(
-          _initialsFor(value.text),
-          style: TextStyle(color: theme.colorScheme.onPrimaryContainer, fontSize: 12),
-        ),
-      ),
-    );
-
-    return Column(
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        avatar,
+        UserAvatar(imageBytes: person.avatar, radius: 14),
         const SizedBox(height: 4),
-        if (controller != null)
-          SizedBox(
-            width: 120,
-            child: TextField(
-              controller: controller,
-              decoration: const InputDecoration(isDense: true, border: OutlineInputBorder()),
-              style: theme.textTheme.bodyMedium,
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 110),
+              child: Text(person.name, overflow: TextOverflow.ellipsis),
             ),
-          )
-        else
-          Text(fallback.isEmpty ? '—' : fallback),
+            if (onTap != null) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.edit, size: 14, color: theme.colorScheme.onSurfaceVariant),
+            ],
+          ],
+        ),
       ],
     );
+
+    if (onTap == null) return content;
+    return InkWell(onTap: onTap, child: content);
   }
 }
