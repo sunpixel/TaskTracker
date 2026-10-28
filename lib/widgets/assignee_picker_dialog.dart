@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/user_store.dart';
+import '../l10n/generated/app_localizations.dart';
 import 'debounced_user_search.dart';
 import 'user_avatar.dart';
 
@@ -17,12 +18,13 @@ class AssigneePickerDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final contacts = userStore.contacts;
     final isLoggedIn = userStore.isLoggedIn;
     final me = userStore.currentUser;
 
     return AlertDialog(
-      title: const Text('Assign to'),
+      title: Text(l10n.assignToTitle),
       content: SizedBox(
         width: 320,
         child: SingleChildScrollView(
@@ -33,7 +35,7 @@ class AssigneePickerDialog extends StatelessWidget {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: UserAvatar(imageBytes: me?.profilePicture, radius: 18),
-                title: const Text('Myself'),
+                title: Text(l10n.assigneePickerMyself),
                 onTap: () => Navigator.of(context).pop(userStore.effectiveUserId),
               ),
               if (contacts.isNotEmpty) const Divider(),
@@ -47,9 +49,7 @@ class AssigneePickerDialog extends StatelessWidget {
                 ),
               const Divider(),
               Text(
-                isLoggedIn
-                    ? 'Not in your contacts? Search by username:'
-                    : 'Log in to search for other accounts.',
+                isLoggedIn ? l10n.assigneePickerSearchPrompt : l10n.assigneePickerLoginPrompt,
                 style: theme.textTheme.bodySmall,
               ),
               if (isLoggedIn) ...[
@@ -66,7 +66,7 @@ class AssigneePickerDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
       ],
     );

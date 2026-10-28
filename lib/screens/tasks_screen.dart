@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/task_store.dart';
 import '../data/task_store_scope.dart';
 import '../data/user_store_scope.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../models/task.dart';
 import '../navigation/app_nav_controller.dart';
 import '../navigation/app_nav_scope.dart';
@@ -34,7 +35,13 @@ class TasksScreen extends StatefulWidget {
 }
 
 class _TasksScreenState extends State<TasksScreen> {
-  TaskFilter _selected = const TaskFilter.all();
+  // The label here is never actually shown — the chip rendered for
+  // whichever filter is selected always pulls its label fresh from the
+  // localized `filters` list built in `build()` below; equality between
+  // filters ignores `label` entirely (see TaskFilter), so this
+  // placeholder only matters until the user's first tap replaces it with
+  // the real (localized) filter object anyway.
+  TaskFilter _selected = const TaskFilter.all('');
   AppNavController? _navController;
 
   @override
@@ -76,6 +83,7 @@ class _TasksScreenState extends State<TasksScreen> {
     final store = TaskStoreScope.of(context);
     final nav = AppNavScope.of(context);
     final currentUserId = UserStoreScope.of(context).effectiveUserId;
+    final l10n = AppLocalizations.of(context)!;
 
     if (store.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -84,9 +92,9 @@ class _TasksScreenState extends State<TasksScreen> {
     final allTasks = store.tasks;
     final categories = allTasks.expand((t) => t.categories).toSet().toList()..sort();
     final filters = [
-      const TaskFilter.all(),
-      const TaskFilter.assignedToMe(),
-      const TaskFilter.mine(),
+      TaskFilter.all(l10n.taskFilterAll),
+      TaskFilter.assignedToMe(l10n.taskFilterAssignedToMe),
+      TaskFilter.mine(l10n.taskFilterMine),
       for (final category in categories) TaskFilter.category(category, category),
     ];
 
@@ -104,7 +112,7 @@ class _TasksScreenState extends State<TasksScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tasks'),
+        title: Text(l10n.navTasks),
         leading: nav.tasksTabHasBackButton
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
@@ -131,28 +139,28 @@ class _TasksScreenState extends State<TasksScreen> {
                       // A plain Center() can't be pulled-to-refresh —
                       // RefreshIndicator needs a scrollable child even
                       // for the empty state.
-                      children: const [
-                        SizedBox(height: 120),
-                        Center(child: Text('No tasks match this filter.')),
+                      children: [
+                        const SizedBox(height: 120),
+                        Center(child: Text(l10n.tasksNoMatch)),
                       ],
                     )
                   : ListView(
                       children: [
                         _TaskSection(
-                          title: 'Current Tasks',
+                          title: l10n.tasksCurrentSection,
                           tasks: current,
                           currentUserId: currentUserId,
                           store: store,
                           initiallyExpanded: true,
-                          emptyLabel: 'Nothing current.',
+                          emptyLabel: l10n.tasksNothingCurrent,
                         ),
                         _TaskSection(
-                          title: 'Completed Tasks',
+                          title: l10n.tasksCompletedSection,
                           tasks: completed,
                           currentUserId: currentUserId,
                           store: store,
                           initiallyExpanded: false,
-                          emptyLabel: 'Nothing completed yet.',
+                          emptyLabel: l10n.tasksNothingCompleted,
                         ),
                       ],
                     ),

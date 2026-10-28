@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/generated/app_localizations.dart';
+
 /// Horizontally scrollable row of a task's categories, each removable,
 /// with a "+" to add more pinned at the right edge of the viewport.
 ///
@@ -31,18 +33,19 @@ class CategoryChipsEditor extends StatelessWidget {
   Future<void> _promptAdd(BuildContext context) async {
     final controller = TextEditingController();
     final reusable = suggestions.where((s) => !_alreadyHas(s)).toList();
+    final l10n = AppLocalizations.of(context)!;
 
     final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add category'),
+        title: Text(l10n.categoryEditorAddTitle),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (reusable.isNotEmpty) ...[
-                Text('Existing categories', style: Theme.of(context).textTheme.bodySmall),
+                Text(l10n.categoryEditorExisting, style: Theme.of(context).textTheme.bodySmall),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 8,
@@ -56,13 +59,13 @@ class CategoryChipsEditor extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                Text('Or create a new one', style: Theme.of(context).textTheme.bodySmall),
+                Text(l10n.categoryEditorOrCreateNew, style: Theme.of(context).textTheme.bodySmall),
                 const SizedBox(height: 6),
               ],
               TextField(
                 controller: controller,
                 autofocus: reusable.isEmpty,
-                decoration: const InputDecoration(hintText: 'Category name'),
+                decoration: InputDecoration(hintText: l10n.categoryEditorNameHint),
                 onSubmitted: (value) => Navigator.pop(context, value),
               ),
             ],
@@ -71,11 +74,11 @@ class CategoryChipsEditor extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Add'),
+            child: Text(l10n.add),
           ),
         ],
       ),
@@ -93,6 +96,7 @@ class CategoryChipsEditor extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     final chipRow = ListView.separated(
       scrollDirection: Axis.horizontal,
@@ -119,7 +123,7 @@ class CategoryChipsEditor extends StatelessWidget {
       child: categories.isEmpty && !editable
           ? Align(
               alignment: Alignment.centerLeft,
-              child: Text('No categories', style: theme.textTheme.bodyMedium),
+              child: Text(l10n.categoryEditorNoCategories, style: theme.textTheme.bodyMedium),
             )
           : Stack(
               children: [

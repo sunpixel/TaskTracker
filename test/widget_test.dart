@@ -4,6 +4,7 @@ import 'package:task_tracker/data/in_memory_task_repository.dart';
 import 'package:task_tracker/data/in_memory_user_repository.dart';
 import 'package:task_tracker/data/task_store.dart';
 import 'package:task_tracker/data/user_store.dart';
+import 'package:task_tracker/locale/locale_controller.dart';
 import 'package:task_tracker/main.dart';
 import 'package:task_tracker/services/auth_token_store.dart';
 import 'package:task_tracker/services/key_value_store.dart';
@@ -27,6 +28,7 @@ void main() {
 
     await tester.pumpWidget(TaskTrackerApp(
       themeController: ThemeController(),
+      localeController: LocaleController(),
       taskStore: TaskStore(userStore: userStore, repository: InMemoryTaskRepository()),
       userStore: userStore,
     ));

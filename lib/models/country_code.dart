@@ -1,3 +1,5 @@
+import '../l10n/generated/app_localizations.dart';
+
 /// A country's calling code, for splitting a phone number into
 /// (country, national number) rather than one opaque formatted string —
 /// see `utils/phone_numbers.dart` for why. Mirrors the server's
@@ -24,14 +26,17 @@ extension CountryCodeInfo on CountryCode {
     }
   }
 
-  String get label {
+  /// Display label, localized — see `TaskStatusLabel.label`'s doc
+  /// (task_status.dart) for why this takes [l10n] instead of being a
+  /// plain getter.
+  String label(AppLocalizations l10n) {
     switch (this) {
       case CountryCode.unitedStates:
-        return 'United States (+1)';
+        return l10n.countryUnitedStates;
       case CountryCode.russia:
-        return 'Russia (+7)';
+        return l10n.countryRussia;
       case CountryCode.netherlands:
-        return 'Netherlands (+31)';
+        return l10n.countryNetherlands;
     }
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/user_store.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../models/country_code.dart';
 import '../utils/input_validators.dart';
 
@@ -36,12 +37,22 @@ class _AuthDialogState extends State<AuthDialog> {
     super.dispose();
   }
 
+  String? _emailErrorMessage(EmailError error, AppLocalizations l10n) {
+    switch (error) {
+      case EmailError.empty:
+        return l10n.emailRequired;
+      case EmailError.invalidFormat:
+        return l10n.emailInvalid;
+    }
+  }
+
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context)!;
     final userName = _userNameController.text.trim();
     final password = _passwordController.text;
 
     if (userName.isEmpty || password.isEmpty) {
-      setState(() => _error = 'Username and password are required.');
+      setState(() => _error = l10n.authUsernamePasswordRequired);
       return;
     }
 
@@ -49,7 +60,7 @@ class _AuthDialogState extends State<AuthDialog> {
     if (_signUpMode) {
       final emailError = validateEmail(_emailController.text);
       if (emailError != null) {
-        setState(() => _error = emailError);
+        setState(() => _error = _emailErrorMessage(emailError, l10n));
         return;
       }
 
@@ -58,12 +69,16 @@ class _AuthDialogState extends State<AuthDialog> {
         phoneDigits = phoneDigitsOnly(rawPhone);
         final country = _countryCode;
         if (country == null) {
-          setState(() => _error = 'Pick a country for the phone number.');
+          setState(() => _error = l10n.authPickCountry);
           return;
         }
         final phoneError = validatePhoneDigits(phoneDigits, country);
         if (phoneError != null) {
-          setState(() => _error = phoneError);
+          setState(() => _error = l10n.phoneLengthError(
+                phoneError.country.label(l10n),
+                phoneError.expected,
+                phoneError.actual,
+              ));
           return;
         }
       }
@@ -98,8 +113,9 @@ class _AuthDialogState extends State<AuthDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: Text(_signUpMode ? 'Create account' : 'Log in'),
+      title: Text(_signUpMode ? l10n.authCreateAccountTitle : l10n.authLogInTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -107,25 +123,25 @@ class _AuthDialogState extends State<AuthDialog> {
           children: [
             TextField(
               controller: _userNameController,
-              decoration: const InputDecoration(labelText: 'Username'),
+              decoration: InputDecoration(labelText: l10n.authUsernameLabel),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
+              decoration: InputDecoration(labelText: l10n.authPasswordLabel),
               obscureText: true,
             ),
             if (_signUpMode) ...[
               const SizedBox(height: 8),
               TextField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
+                decoration: InputDecoration(labelText: l10n.authEmailLabel),
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _fullNameController,
-                decoration: const InputDecoration(labelText: 'Full name (optional)'),
+                decoration: InputDecoration(labelText: l10n.authFullNameLabel),
               ),
               const SizedBox(height: 8),
               Row(
@@ -135,9 +151,9 @@ class _AuthDialogState extends State<AuthDialog> {
                     flex: 2,
                     child: DropdownButtonFormField<CountryCode>(
                       initialValue: _countryCode,
-                      decoration: const InputDecoration(labelText: 'Country'),
+                      decoration: InputDecoration(labelText: l10n.authCountryLabel),
                       items: CountryCode.values
-                          .map((c) => DropdownMenuItem(value: c, child: Text(c.label, overflow: TextOverflow.ellipsis)))
+                          .map((c) => DropdownMenuItem(value: c, child: Text(c.label(l10n), overflow: TextOverflow.ellipsis)))
                           .toList(),
                       onChanged: (value) => setState(() => _countryCode = value),
                     ),
@@ -147,7 +163,7 @@ class _AuthDialogState extends State<AuthDialog> {
                     flex: 3,
                     child: TextField(
                       controller: _phoneController,
-                      decoration: const InputDecoration(labelText: 'Phone (optional)'),
+                      decoration: InputDecoration(labelText: l10n.authPhoneLabel),
                       keyboardType: TextInputType.phone,
                       inputFormatters: [digitsOnlyInputFormatter],
                     ),
@@ -167,7 +183,7 @@ class _AuthDialogState extends State<AuthDialog> {
                         _signUpMode = !_signUpMode;
                         _error = null;
                       }),
-              child: Text(_signUpMode ? 'Already have an account? Log in' : 'New here? Create an account'),
+              child: Text(_signUpMode ? l10n.authSwitchToLogin : l10n.authSwitchToSignUp),
             ),
           ],
         ),
@@ -175,11 +191,11 @@ class _AuthDialogState extends State<AuthDialog> {
       actions: [
         TextButton(
           onPressed: _submitting ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: _submitting ? null : _submit,
-          child: Text(_signUpMode ? 'Create account' : 'Log in'),
+          child: Text(_signUpMode ? l10n.authCreateAccountTitle : l10n.authLogInTitle),
         ),
       ],
     );

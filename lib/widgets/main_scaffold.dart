@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/generated/app_localizations.dart';
+import '../locale/locale_controller.dart';
 import '../navigation/app_nav_controller.dart';
 import '../navigation/app_nav_scope.dart';
 import '../screens/home_screen.dart';
@@ -28,8 +30,9 @@ import 'keep_alive_page.dart';
 /// which way each direction animates if this ever needs reversing again.
 class MainScaffold extends StatefulWidget {
   final ThemeController themeController;
+  final LocaleController localeController;
 
-  const MainScaffold({super.key, required this.themeController});
+  const MainScaffold({super.key, required this.themeController, required this.localeController});
 
   @override
   State<MainScaffold> createState() => _MainScaffoldState();
@@ -44,11 +47,11 @@ class _MainScaffoldState extends State<MainScaffold> {
   final PageController _pageController = PageController();
   int _displayedIndex = 0;
 
-  static const _items = [
-    NavBarItem(icon: Icons.home_outlined, selectedIcon: Icons.home, label: 'Home'),
-    NavBarItem(icon: Icons.checklist_outlined, selectedIcon: Icons.checklist, label: 'Tasks'),
-    NavBarItem(icon: Icons.person_outline, selectedIcon: Icons.person, label: 'Profile'),
-  ];
+  List<NavBarItem> _items(AppLocalizations l10n) => [
+        NavBarItem(icon: Icons.home_outlined, selectedIcon: Icons.home, label: l10n.navHome),
+        NavBarItem(icon: Icons.checklist_outlined, selectedIcon: Icons.checklist, label: l10n.navTasks),
+        NavBarItem(icon: Icons.person_outline, selectedIcon: Icons.person, label: l10n.navProfile),
+      ];
 
   @override
   void dispose() {
@@ -73,11 +76,12 @@ class _MainScaffoldState extends State<MainScaffold> {
   Widget build(BuildContext context) {
     final nav = AppNavScope.of(context);
     _syncPageTo(nav.tabIndex);
+    final l10n = AppLocalizations.of(context)!;
 
     final pages = [
       const HomeScreen(),
       const TasksScreen(),
-      ProfileScreen(themeController: widget.themeController),
+      ProfileScreen(themeController: widget.themeController, localeController: widget.localeController),
     ];
 
     final activeNavigator = _navigatorKeys[nav.tabIndex].currentState;
@@ -111,7 +115,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         ),
         bottomNavigationBar: AnimatedNavBar(
           selectedIndex: nav.tabIndex,
-          items: _items,
+          items: _items(l10n),
           onSelected: nav.setTabIndex,
         ),
       ),

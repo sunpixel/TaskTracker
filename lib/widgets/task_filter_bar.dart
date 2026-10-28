@@ -11,22 +11,19 @@ class TaskFilter {
   final TaskAssignment? assignment;
   final String? category;
 
-  const TaskFilter.all()
-      : label = 'All',
-        assignment = null,
+  const TaskFilter.all(this.label)
+      : assignment = null,
         category = null;
 
   /// Tasks delegated to the current user by someone else.
-  const TaskFilter.assignedToMe()
-      : label = 'Assigned to me',
-        assignment = TaskAssignment.assignedToMe,
+  const TaskFilter.assignedToMe(this.label)
+      : assignment = TaskAssignment.assignedToMe,
         category = null;
 
   /// Tasks the current user created/owns (self tasks and ones delegated
   /// to someone else).
-  const TaskFilter.mine()
-      : label = 'Mine',
-        assignment = TaskAssignment.mine,
+  const TaskFilter.mine(this.label)
+      : assignment = TaskAssignment.mine,
         category = null;
 
   const TaskFilter.category(this.category, this.label) : assignment = null;
@@ -37,15 +34,16 @@ class TaskFilter {
     return true; // "All"
   }
 
+  // Deliberately excludes [label] — it's just display text, now
+  // localized at construction time (see callers), so the same logical
+  // filter built under two different languages must still compare equal
+  // (e.g. a filter selection persisted across a language change).
   @override
   bool operator ==(Object other) =>
-      other is TaskFilter &&
-      other.label == label &&
-      other.assignment == assignment &&
-      other.category == category;
+      other is TaskFilter && other.assignment == assignment && other.category == category;
 
   @override
-  int get hashCode => Object.hash(label, assignment, category);
+  int get hashCode => Object.hash(assignment, category);
 }
 
 /// Horizontally scrollable row of filter chips sitting at the top of the

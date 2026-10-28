@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../models/task.dart';
 import '../models/task_status.dart';
 import '../utils/date_format.dart';
@@ -35,6 +36,7 @@ class TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final urgency = urgencyOf(task);
     final colors = urgencyColors(urgency, theme.brightness);
     final showStatusChip = task.status != TaskStatus.pending && task.status != TaskStatus.completed;
@@ -88,10 +90,10 @@ class TaskCard extends StatelessWidget {
               runSpacing: 4,
               children: [
                 for (final category in task.categories) _Tag(category, colors),
-                if (showStatusChip) _Tag(task.status.label, colors),
+                if (showStatusChip) _Tag(task.status.label(l10n), colors),
                 Icon(Icons.schedule, size: 14, color: colors?.onBackground ?? theme.colorScheme.onSurfaceVariant),
                 Text(
-                  task.dueAt == null ? 'No due date' : formatDateTime(task.dueAt!),
+                  task.dueAt == null ? l10n.taskNoDueDate : formatDateTime(task.dueAt!),
                   style: theme.textTheme.bodySmall?.copyWith(color: colors?.onBackground),
                 ),
               ],

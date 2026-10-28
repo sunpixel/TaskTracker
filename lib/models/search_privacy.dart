@@ -1,3 +1,5 @@
+import '../l10n/generated/app_localizations.dart';
+
 /// Who can find this account via username/phone search. Mirrors the
 /// server's TaskTracker.Domain.Enums.SearchPrivacy exactly,
 /// position-for-position — both sides transmit this as a plain integer
@@ -17,25 +19,27 @@ enum SearchPrivacy {
 }
 
 extension SearchPrivacyLabel on SearchPrivacy {
-  String get label {
+  /// Display label, localized — see `TaskStatusLabel.label`'s doc for
+  /// why this takes [l10n] instead of being a plain getter.
+  String label(AppLocalizations l10n) {
     switch (this) {
       case SearchPrivacy.allowAll:
-        return 'Allow all searches';
+        return l10n.privacyAllowAllLabel;
       case SearchPrivacy.exactUsernameOnly:
-        return 'Exact username only';
+        return l10n.privacyExactUsernameLabel;
       case SearchPrivacy.contactsOrPhoneOnly:
-        return 'Contacts/phone only';
+        return l10n.privacyContactsPhoneLabel;
     }
   }
 
-  String get description {
+  String description(AppLocalizations l10n) {
     switch (this) {
       case SearchPrivacy.allowAll:
-        return 'Anyone can find you by typing part of your username.';
+        return l10n.privacyAllowAllDescription;
       case SearchPrivacy.exactUsernameOnly:
-        return "Only findable if someone types your exact username.";
+        return l10n.privacyExactUsernameDescription;
       case SearchPrivacy.contactsOrPhoneOnly:
-        return 'Not findable by username at all — only by your exact phone number.';
+        return l10n.privacyContactsPhoneDescription;
     }
   }
 }

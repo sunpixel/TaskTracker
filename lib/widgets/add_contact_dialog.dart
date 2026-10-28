@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../data/user_store.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../models/country_code.dart';
 import '../models/user.dart';
 import '../utils/input_validators.dart';
@@ -50,20 +51,30 @@ class _AddContactDialogState extends State<AddContactDialog> {
       await widget.userStore.addRealContact(user.userName);
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      setState(() => _error = 'Could not add that contact.');
+      setState(() => _error = AppLocalizations.of(context)!.addContactFailed);
+    }
+  }
+
+  String? _emailErrorMessage(EmailError error, AppLocalizations l10n) {
+    switch (error) {
+      case EmailError.empty:
+        return l10n.emailRequired;
+      case EmailError.invalidFormat:
+        return l10n.emailInvalid;
     }
   }
 
   Future<void> _addPlaceholder() async {
+    final l10n = AppLocalizations.of(context)!;
     final userName = _userNameController.text.trim();
     final email = _emailController.text.trim();
     if (userName.isEmpty || email.isEmpty) {
-      setState(() => _error = 'Username and email are required.');
+      setState(() => _error = l10n.addContactUsernameEmailRequired);
       return;
     }
     final emailError = validateEmail(email);
     if (emailError != null) {
-      setState(() => _error = emailError);
+      setState(() => _error = _emailErrorMessage(emailError, l10n));
       return;
     }
 
@@ -73,12 +84,16 @@ class _AddContactDialogState extends State<AddContactDialog> {
       phoneDigits = phoneDigitsOnly(rawPhone);
       final country = _countryCode;
       if (country == null) {
-        setState(() => _error = 'Pick a country for the phone number.');
+        setState(() => _error = l10n.authPickCountry);
         return;
       }
       final phoneError = validatePhoneDigits(phoneDigits, country);
       if (phoneError != null) {
-        setState(() => _error = phoneError);
+        setState(() => _error = l10n.phoneLengthError(
+              phoneError.country.label(l10n),
+              phoneError.expected,
+              phoneError.actual,
+            ));
         return;
       }
     }
@@ -98,10 +113,11 @@ class _AddContactDialogState extends State<AddContactDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final isLoggedIn = widget.userStore.isLoggedIn;
 
     return AlertDialog(
-      title: const Text('Add contact'),
+      title: Text(l10n.addContactTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -115,28 +131,28 @@ class _AddContactDialogState extends State<AddContactDialog> {
               const SizedBox(height: 8),
               TextButton(
                 onPressed: () => setState(() => _showPlaceholderForm = true),
-                child: const Text("Not on the app yet? Add them anyway"),
+                child: Text(l10n.addContactNotOnApp),
               ),
             ] else ...[
               if (isLoggedIn)
                 TextButton(
                   onPressed: () => setState(() => _showPlaceholderForm = false),
-                  child: const Text('Search for a real account instead'),
+                  child: Text(l10n.addContactSearchInstead),
                 ),
               TextField(
                 controller: _userNameController,
-                decoration: const InputDecoration(labelText: 'Username'),
+                decoration: InputDecoration(labelText: l10n.authUsernameLabel),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
+                decoration: InputDecoration(labelText: l10n.authEmailLabel),
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _fullNameController,
-                decoration: const InputDecoration(labelText: 'Full name (optional)'),
+                decoration: InputDecoration(labelText: l10n.authFullNameLabel),
               ),
               const SizedBox(height: 8),
               Row(
@@ -146,9 +162,9 @@ class _AddContactDialogState extends State<AddContactDialog> {
                     flex: 2,
                     child: DropdownButtonFormField<CountryCode>(
                       initialValue: _countryCode,
-                      decoration: const InputDecoration(labelText: 'Country'),
+                      decoration: InputDecoration(labelText: l10n.authCountryLabel),
                       items: CountryCode.values
-                          .map((c) => DropdownMenuItem(value: c, child: Text(c.label, overflow: TextOverflow.ellipsis)))
+                          .map((c) => DropdownMenuItem(value: c, child: Text(c.label(l10n), overflow: TextOverflow.ellipsis)))
                           .toList(),
                       onChanged: (value) => setState(() => _countryCode = value),
                     ),
@@ -158,7 +174,7 @@ class _AddContactDialogState extends State<AddContactDialog> {
                     flex: 3,
                     child: TextField(
                       controller: _phoneController,
-                      decoration: const InputDecoration(labelText: 'Phone (optional)'),
+                      decoration: InputDecoration(labelText: l10n.authPhoneLabel),
                       keyboardType: TextInputType.phone,
                       inputFormatters: [digitsOnlyInputFormatter],
                     ),
@@ -168,7 +184,7 @@ class _AddContactDialogState extends State<AddContactDialog> {
               const SizedBox(height: 8),
               TextField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description (optional)'),
+                decoration: InputDecoration(labelText: l10n.addContactDescriptionLabel),
                 maxLines: 2,
               ),
             ],
@@ -182,9 +198,9 @@ class _AddContactDialogState extends State<AddContactDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
-        if (!isLoggedIn || _showPlaceholderForm) FilledButton(onPressed: _addPlaceholder, child: const Text('Add')),
+        if (!isLoggedIn || _showPlaceholderForm) FilledButton(onPressed: _addPlaceholder, child: Text(l10n.add)),
       ],
     );
   }

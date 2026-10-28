@@ -2,6 +2,8 @@ import 'package:flutter/services.dart';
 
 import '../models/country_code.dart';
 
+enum EmailError { empty, invalidFormat }
+
 /// A format pre-check, not a deliverability check — this can't tell you
 /// whether an address actually exists or accepts mail, only that it's
 /// shaped like one. The only real way to confirm an address works is to
@@ -10,12 +12,14 @@ import '../models/country_code.dart';
 /// RFC 5322 pattern, which is notoriously fussy to get exactly right.
 final _emailPattern = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
 
-/// Returns an error message if [email] doesn't look like a plausible
-/// address, or `null` if it's fine.
-String? validateEmail(String email) {
+/// Returns an [EmailError] if [email] doesn't look like a plausible
+/// address, or `null` if it's fine. Returned as an enum, not an English
+/// message, so the UI layer localizes it — see `DueDateError`'s doc for
+/// why.
+EmailError? validateEmail(String email) {
   final trimmed = email.trim();
-  if (trimmed.isEmpty) return 'Email is required.';
-  if (!_emailPattern.hasMatch(trimmed)) return "That doesn't look like a valid email address.";
+  if (trimmed.isEmpty) return EmailError.empty;
+  if (!_emailPattern.hasMatch(trimmed)) return EmailError.invalidFormat;
   return null;
 }
 
@@ -24,14 +28,24 @@ String? validateEmail(String email) {
 /// PhoneNumbers.DigitsOnly exactly.
 String phoneDigitsOnly(String raw) => raw.replaceAll(RegExp(r'[^0-9]'), '');
 
-/// Returns an error message if [digits] (already digits-only) isn't a
+/// A implausible digit count for a given country — carries the expected
+/// and actual counts so the UI can phrase the message (and localize
+/// [country]'s own name) without this function needing a `BuildContext`.
+class PhoneLengthError {
+  final CountryCode country;
+  final int expected;
+  final int actual;
+  const PhoneLengthError({required this.country, required this.expected, required this.actual});
+}
+
+/// Returns a [PhoneLengthError] if [digits] (already digits-only) isn't a
 /// plausible length for [country], or `null` if it's fine — see
 /// CountryCodeInfo.expectedNationalNumberLength's doc: this is a light
 /// sanity check, not real phone validation.
-String? validatePhoneDigits(String digits, CountryCode country) {
+PhoneLengthError? validatePhoneDigits(String digits, CountryCode country) {
   final expected = country.expectedNationalNumberLength;
   if (digits.length != expected) {
-    return 'A ${country.label} phone number should have $expected digits (got ${digits.length}).';
+    return PhoneLengthError(country: country, expected: expected, actual: digits.length);
   }
   return null;
 }

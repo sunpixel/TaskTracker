@@ -1,3 +1,5 @@
+import '../l10n/generated/app_localizations.dart';
+
 /// Lifecycle state of a [Task].
 ///
 /// Stored *locally* in SQLite as its `.name` (e.g. 'onReview'), not an
@@ -27,20 +29,22 @@ enum TaskStatus {
 }
 
 extension TaskStatusLabel on TaskStatus {
-  String get label {
+  /// Display label, localized — takes [l10n] rather than being a plain
+  /// getter since the text now depends on the app's current language.
+  String label(AppLocalizations l10n) {
     switch (this) {
       case TaskStatus.assigned:
-        return 'Assigned';
+        return l10n.taskStatusAssigned;
       case TaskStatus.working:
-        return 'Working';
+        return l10n.taskStatusWorking;
       case TaskStatus.pending:
-        return 'Pending';
+        return l10n.taskStatusPending;
       case TaskStatus.onReview:
-        return 'On Review';
+        return l10n.taskStatusOnReview;
       case TaskStatus.completed:
-        return 'Complete';
+        return l10n.taskStatusCompleted;
       case TaskStatus.toBeRedone:
-        return 'To be redone';
+        return l10n.taskStatusToBeRedone;
     }
   }
 }

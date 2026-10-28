@@ -1,0 +1,154 @@
+{
+  "@@locale": "es",
+
+  "cancel": "Cancelar",
+  "delete": "Eliminar",
+  "add": "Añadir",
+  "close": "Cerrar",
+
+  "navHome": "Inicio",
+  "navTasks": "Tareas",
+  "navProfile": "Perfil",
+
+  "homeUpNext": "Próximamente",
+  "homeNothingDue": "Nada pendiente. ¡Buen trabajo!",
+
+  "taskFilterAll": "Todas",
+  "taskFilterAssignedToMe": "Asignadas a mí",
+  "taskFilterMine": "Mías",
+
+  "tasksNoMatch": "Ninguna tarea coincide con este filtro.",
+  "tasksCurrentSection": "Tareas actuales",
+  "tasksCompletedSection": "Tareas completadas",
+  "tasksNothingCurrent": "No hay tareas actuales.",
+  "tasksNothingCompleted": "Aún no hay nada completado.",
+
+  "taskNoDueDate": "Sin fecha límite",
+  "taskUnassigned": "Sin asignar",
+  "taskYou": "Tú",
+
+  "taskDetailNewTitle": "Nueva tarea",
+  "taskDetailMissing": "Esta tarea ya no existe.",
+  "taskDetailTaskNameLabel": "Nombre de la tarea",
+  "taskDetailDescriptionHeading": "Descripción",
+  "taskDetailDescriptionHint": "¿Qué hay que hacer?",
+  "taskDetailNoDescription": "Sin descripción.",
+  "taskDetailCreatedLabel": "Creada",
+  "taskDetailDueLabel": "Vence",
+  "taskDetailAssignerLabel": "Asignada por",
+  "taskDetailAssigneeLabel": "Asignada a",
+  "taskDetailTapToSet": "Toca para establecer",
+  "taskDetailAddToCalendar": "Añadir al calendario",
+  "taskDetailStatusHeading": "Estado",
+  "taskDetailCreateButton": "Crear tarea",
+  "taskDetailSaveButton": "Guardar cambios",
+  "assignToTitle": "Asignar a",
+
+  "calendarAdded": "Abierto en tu app de calendario.",
+  "calendarNoDueDate": "Establece primero una fecha límite.",
+  "calendarUnsupported": "Añadir al calendario aún no es compatible con esta plataforma.",
+  "calendarFailed": "No se pudo añadir esto al calendario.",
+
+  "titleRequiredError": "El nombre de la tarea es obligatorio.",
+  "dueDateTooSoonError": "La fecha límite debe ser al menos un minuto posterior a la de creación.",
+
+  "quickToggleBackToPending": "Volver a pendiente",
+  "quickToggleMarkMyPartDone": "Marcar mi parte como hecha",
+  "quickToggleMarkAsPending": "Marcar como pendiente",
+  "quickToggleMarkAsComplete": "Marcar como completada",
+
+  "taskStatusAssigned": "Asignada",
+  "taskStatusWorking": "En curso",
+  "taskStatusPending": "Pendiente",
+  "taskStatusOnReview": "En revisión",
+  "taskStatusCompleted": "Completada",
+  "taskStatusToBeRedone": "Para rehacer",
+
+  "categoryEditorNoCategories": "Sin categorías",
+  "categoryEditorAddTitle": "Añadir categoría",
+  "categoryEditorExisting": "Categorías existentes",
+  "categoryEditorOrCreateNew": "O crea una nueva",
+  "categoryEditorNameHint": "Nombre de la categoría",
+
+  "assigneePickerMyself": "A mí mismo",
+  "assigneePickerSearchPrompt": "¿No está en tus contactos? Busca por nombre de usuario:",
+  "assigneePickerLoginPrompt": "Inicia sesión para buscar otras cuentas.",
+
+  "searchUsernameLabel": "Nombre de usuario",
+  "searchHintMinChars": "Escribe al menos {count} caracteres",
+  "searchNoResults": "No se encontró ningún usuario.",
+
+  "profileTitle": "Perfil",
+  "profileNotLoggedIn": "No has iniciado sesión",
+  "profileLogIn": "Iniciar sesión",
+  "profileLogOut": "Cerrar sesión",
+  "profileContacts": "Contactos",
+  "profileAddContactTooltip": "Añadir contacto",
+  "profileNoContacts": "Aún no hay contactos.",
+  "profileDeleteContactTooltip": "Eliminar contacto",
+  "profileDeleteContactTitle": "¿Eliminar contacto?",
+  "profileDeleteContactBody": "¿Seguro que quieres eliminar a «{name}» de tus contactos?",
+  "profileWhoCanFindYou": "Quién puede encontrarte",
+  "profilePrivacyUpdateError": "No se pudo actualizar esto — comprueba tu conexión e inténtalo de nuevo.",
+  "profileAppearance": "Apariencia",
+  "profileLanguage": "Idioma",
+  "profileLanguageSystemDefault": "Predeterminado del sistema",
+
+  "privacyAllowAllLabel": "Permitir cualquier búsqueda",
+  "privacyAllowAllDescription": "Cualquiera puede encontrarte escribiendo parte de tu nombre de usuario.",
+  "privacyExactUsernameLabel": "Solo nombre de usuario exacto",
+  "privacyExactUsernameDescription": "Solo se te puede encontrar si alguien escribe tu nombre de usuario exacto.",
+  "privacyContactsPhoneLabel": "Solo contactos/teléfono",
+  "privacyContactsPhoneDescription": "No se te puede encontrar por nombre de usuario — solo por tu número de teléfono exacto.",
+
+  "countryUnitedStates": "Estados Unidos (+1)",
+  "countryRussia": "Rusia (+7)",
+  "countryNetherlands": "Países Bajos (+31)",
+
+  "authCreateAccountTitle": "Crear cuenta",
+  "authLogInTitle": "Iniciar sesión",
+  "authUsernameLabel": "Nombre de usuario",
+  "authPasswordLabel": "Contraseña",
+  "authEmailLabel": "Correo electrónico",
+  "authFullNameLabel": "Nombre completo (opcional)",
+  "authPhoneLabel": "Teléfono (opcional)",
+  "authCountryLabel": "País",
+  "authUsernamePasswordRequired": "El nombre de usuario y la contraseña son obligatorios.",
+  "authPickCountry": "Elige un país para el número de teléfono.",
+  "authSwitchToLogin": "¿Ya tienes una cuenta? Inicia sesión",
+  "authSwitchToSignUp": "¿Nuevo aquí? Crea una cuenta",
+
+  "addContactTitle": "Añadir contacto",
+  "addContactNotOnApp": "¿Aún no está en la app? Añádelo de todos modos",
+  "addContactSearchInstead": "Buscar una cuenta real en su lugar",
+  "addContactDescriptionLabel": "Descripción (opcional)",
+  "addContactUsernameEmailRequired": "El nombre de usuario y el correo son obligatorios.",
+  "addContactFailed": "No se pudo añadir ese contacto.",
+
+  "emailRequired": "El correo electrónico es obligatorio.",
+  "emailInvalid": "Eso no parece una dirección de correo válida.",
+  "phoneLengthError": "Un número de teléfono de {country} debe tener {expected} dígitos (se introdujeron {actual}).",
+
+  "notificationDueIn": "\"{title}\" vence en {hours, plural, =1{1 hora} other{{hours} horas}}",
+  "notificationAssignedTitle": "Se te ha asignado una nueva tarea",
+
+  "@notificationDueIn": {
+    "placeholders": {
+      "title": { "type": "String" },
+      "hours": { "type": "num" }
+    }
+  },
+  "@searchHintMinChars": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "@profileDeleteContactBody": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "@phoneLengthError": {
+    "placeholders": {
+      "country": { "type": "String" },
+      "expected": { "type": "int" },
+      "actual": { "type": "int" }
+    }
+  }
+}

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'data/task_store.dart';
 import 'data/task_store_scope.dart';
 import 'data/user_store.dart';
 import 'data/user_store_scope.dart';
+import 'l10n/generated/app_localizations.dart';
+import 'locale/locale_controller.dart';
 import 'navigation/app_nav_controller.dart';
 import 'navigation/app_nav_scope.dart';
 import 'services/notification_service.dart';
@@ -12,11 +15,12 @@ import 'theme/theme_controller.dart';
 import 'widgets/main_scaffold.dart';
 
 void main() {
-  runApp(TaskTrackerApp(themeController: ThemeController()));
+  runApp(TaskTrackerApp(themeController: ThemeController(), localeController: LocaleController()));
 }
 
 class TaskTrackerApp extends StatefulWidget {
   final ThemeController themeController;
+  final LocaleController localeController;
 
   /// Overridable for tests, so they don't hit the real SQLite path or
   /// the real backend.
@@ -26,6 +30,7 @@ class TaskTrackerApp extends StatefulWidget {
   const TaskTrackerApp({
     super.key,
     required this.themeController,
+    required this.localeController,
     this.taskStore,
     this.userStore,
   });
@@ -81,13 +86,32 @@ class _TaskTrackerAppState extends State<TaskTrackerApp> {
           child: ValueListenableBuilder<ThemeMode>(
             valueListenable: widget.themeController,
             builder: (context, mode, _) {
-              return MaterialApp(
-                title: 'TaskTracker',
-                debugShowCheckedModeBanner: false,
-                theme: AppTheme.light,
-                darkTheme: AppTheme.dark,
-                themeMode: mode,
-                home: MainScaffold(themeController: widget.themeController),
+              return ValueListenableBuilder<Locale?>(
+                valueListenable: widget.localeController,
+                builder: (context, locale, _) {
+                  return MaterialApp(
+                    title: 'TaskTracker',
+                    debugShowCheckedModeBanner: false,
+                    theme: AppTheme.light,
+                    darkTheme: AppTheme.dark,
+                    themeMode: mode,
+                    // `locale: null` (the "follow system" choice) lets
+                    // Flutter resolve the device's own locale against
+                    // `supportedLocales` itself — see LocaleController.
+                    locale: locale,
+                    localizationsDelegates: const [
+                      AppLocalizations.delegate,
+                      GlobalMaterialLocalizations.delegate,
+                      GlobalWidgetsLocalizations.delegate,
+                      GlobalCupertinoLocalizations.delegate,
+                    ],
+                    supportedLocales: AppLocalizations.supportedLocales,
+                    home: MainScaffold(
+                      themeController: widget.themeController,
+                      localeController: widget.localeController,
+                    ),
+                  );
+                },
               );
             },
           ),

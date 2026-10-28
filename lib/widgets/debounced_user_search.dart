@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../data/user_store.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../models/user.dart';
 import 'user_avatar.dart';
 
@@ -19,14 +20,19 @@ import 'user_avatar.dart';
 class DebouncedUserSearch extends StatefulWidget {
   final UserStore userStore;
   final ValueChanged<User> onSelected;
-  final String labelText;
+
+  /// Defaults to the localized "Username" when left unset — `null`
+  /// rather than a hardcoded English default, since a const default
+  /// can't call `AppLocalizations.of(context)`.
+  final String? labelText;
+
   final int visibleTileCount;
 
   const DebouncedUserSearch({
     super.key,
     required this.userStore,
     required this.onSelected,
-    this.labelText = 'Username',
+    this.labelText,
     this.visibleTileCount = 3,
   });
 
@@ -85,6 +91,7 @@ class _DebouncedUserSearchState extends State<DebouncedUserSearch> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final showResultsArea = _searchedQuery != null;
 
     return Column(
@@ -93,8 +100,8 @@ class _DebouncedUserSearchState extends State<DebouncedUserSearch> {
         TextField(
           controller: _controller,
           decoration: InputDecoration(
-            labelText: widget.labelText,
-            hintText: 'Type at least $_minQueryLength characters',
+            labelText: widget.labelText ?? l10n.searchUsernameLabel,
+            hintText: l10n.searchHintMinChars(_minQueryLength),
           ),
           onChanged: _onChanged,
         ),
@@ -106,7 +113,7 @@ class _DebouncedUserSearchState extends State<DebouncedUserSearch> {
                 ? const Center(child: CircularProgressIndicator())
                 : _results.isEmpty
                     ? Center(
-                        child: Text('No matching user found.', style: theme.textTheme.bodySmall),
+                        child: Text(l10n.searchNoResults, style: theme.textTheme.bodySmall),
                       )
                     : ListView.builder(
                         itemCount: _results.length,

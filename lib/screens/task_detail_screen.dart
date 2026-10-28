@@ -7,6 +7,7 @@ import '../data/task_store.dart';
 import '../data/task_store_scope.dart';
 import '../data/user_store.dart';
 import '../data/user_store_scope.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../models/task.dart';
 import '../models/task_status.dart';
 import '../utils/calendar_service.dart';
@@ -115,15 +116,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       );
 
   Future<void> _save(TaskStore store) async {
+    final l10n = AppLocalizations.of(context)!;
     final draft = _draftTask();
     final titleError = validateTitle(draft.title);
     if (titleError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(titleError)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.titleRequiredError)));
       return;
     }
     final dueError = validateDueDate(createdAt: draft.createdAt, dueAt: draft.dueAt);
     if (dueError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(dueError)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.dueDateTooSoonError)));
       return;
     }
 
@@ -155,12 +157,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Future<void> _handleAddToCalendar() async {
     final outcome = await addTaskToCalendar(_draftTask());
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     final message = switch (outcome) {
-      CalendarAddOutcome.added => 'Opened in your calendar app.',
-      CalendarAddOutcome.noDueDate => 'Set a due date first.',
-      CalendarAddOutcome.unsupportedPlatform =>
-        'Adding to calendar isn\'t supported on this platform yet.',
-      CalendarAddOutcome.failed => 'Could not add this to your calendar.',
+      CalendarAddOutcome.added => l10n.calendarAdded,
+      CalendarAddOutcome.noDueDate => l10n.calendarNoDueDate,
+      CalendarAddOutcome.unsupportedPlatform => l10n.calendarUnsupported,
+      CalendarAddOutcome.failed => l10n.calendarFailed,
     };
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
@@ -200,11 +202,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     String? id,
     String currentUserId,
     UserStore userStore,
+    AppLocalizations l10n,
   ) {
-    if (id == null) return (name: 'Unassigned', avatar: null);
+    if (id == null) return (name: l10n.taskUnassigned, avatar: null);
     if (id == currentUserId) {
       final me = userStore.currentUser;
-      return (name: me?.displayName ?? 'You', avatar: me?.profilePicture);
+      return (name: me?.displayName ?? l10n.taskYou, avatar: me?.profilePicture);
     }
     for (final contact in userStore.contacts) {
       if (contact.id == id || contact.userName == id) {
@@ -220,11 +223,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final userStore = UserStoreScope.of(context);
     final currentUserId = userStore.effectiveUserId;
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     if (!_isNew && _original == null) {
       return Scaffold(
-        appBar: AppBar(centerTitle: true, title: const Text('Task')),
-        body: const Center(child: Text('This task no longer exists.')),
+        appBar: AppBar(centerTitle: true, title: Text(l10n.navTasks)),
+        body: Center(child: Text(l10n.taskDetailMissing)),
       );
     }
 
@@ -237,7 +241,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       appBar: AppBar(
         centerTitle: true,
         title: Text(
-          _isNew ? 'New task' : _titleController.text,
+          _isNew ? l10n.taskDetailNewTitle : _titleController.text,
           overflow: TextOverflow.ellipsis,
         ),
       ),
@@ -247,7 +251,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           if (editable) ...[
             TextField(
               controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Task name'),
+              decoration: InputDecoration(labelText: l10n.taskDetailTaskNameLabel),
               onChanged: (_) => setState(() {}), // keeps the AppBar title live
             ),
             const SizedBox(height: 16),
@@ -261,21 +265,21 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           const SizedBox(height: 12),
           const Divider(),
           const SizedBox(height: 8),
-          Text('Description', style: theme.textTheme.titleSmall),
+          Text(l10n.taskDetailDescriptionHeading, style: theme.textTheme.titleSmall),
           const SizedBox(height: 6),
           editable
               ? TextField(
                   controller: _descriptionController,
                   minLines: 2,
                   maxLines: 6,
-                  decoration: const InputDecoration(
-                    hintText: 'What needs to be done?',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    hintText: l10n.taskDetailDescriptionHint,
+                    border: const OutlineInputBorder(),
                   ),
                 )
               : Text(
                   _descriptionController.text.isEmpty
-                      ? 'No description.'
+                      ? l10n.taskDetailNoDescription
                       : _descriptionController.text,
                 ),
           const SizedBox(height: 8),
@@ -283,13 +287,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           const SizedBox(height: 12),
           _InfoColumns(
             columns: [
-              ('Created', Text(formatDateTime(_createdAt))),
+              (l10n.taskDetailCreatedLabel, Text(formatDateTime(_createdAt))),
               (
-                'Due',
+                l10n.taskDetailDueLabel,
                 editable
                     ? _DueDateField(value: _dueAt, onTap: _pickDueDate, onClear: () => setState(() => _dueAt = null))
                     : Text(
-                        _dueAt == null ? 'No due date' : formatDateTime(_dueAt!),
+                        _dueAt == null ? l10n.taskNoDueDate : formatDateTime(_dueAt!),
                         style: TextStyle(color: draft.isOverdue ? theme.colorScheme.error : null),
                       ),
               ),
@@ -299,11 +303,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           _InfoColumns(
             columns: [
               // Always read-only — the assigner never changes.
-              ('Assigner', _PersonCell(person: _resolvePerson(_assigner, currentUserId, userStore))),
               (
-                'Assignee',
+                l10n.taskDetailAssignerLabel,
+                _PersonCell(person: _resolvePerson(_assigner, currentUserId, userStore, l10n)),
+              ),
+              (
+                l10n.taskDetailAssigneeLabel,
                 _PersonCell(
-                  person: _resolvePerson(_assignee, currentUserId, userStore),
+                  person: _resolvePerson(_assignee, currentUserId, userStore, l10n),
                   onTap: editable ? () => _pickAssignee(userStore) : null,
                 ),
               ),
@@ -315,18 +322,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             child: FilledButton.icon(
               onPressed: _dueAt == null ? null : _handleAddToCalendar,
               icon: const Icon(Icons.event_available),
-              label: const Text('Add to calendar'),
+              label: Text(l10n.taskDetailAddToCalendar),
             ),
           ),
           const SizedBox(height: 20),
           if (editable) ...[
-            Text('Status', style: theme.textTheme.titleSmall),
+            Text(l10n.taskDetailStatusHeading, style: theme.textTheme.titleSmall),
             const SizedBox(height: 6),
             DropdownButtonFormField<TaskStatus>(
               initialValue: _status,
               decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
               items: [
-                for (final s in TaskStatus.values) DropdownMenuItem(value: s, child: Text(s.label)),
+                for (final s in TaskStatus.values) DropdownMenuItem(value: s, child: Text(s.label(l10n))),
               ],
               onChanged: (value) => setState(() => _status = value!),
             ),
@@ -337,7 +344,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 ? () => _handleQuickToggleEditable(currentUserId)
                 : () => store.quickToggle(_original!),
             icon: const Icon(Icons.check),
-            label: Text(quickToggleActionLabel(draft, currentUserId)),
+            label: Text(_quickToggleLabel(quickToggleActionFor(draft, currentUserId), l10n)),
           ),
           if (editable) ...[
             const SizedBox(height: 24),
@@ -345,13 +352,26 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               width: double.infinity,
               child: FilledButton(
                 onPressed: _saving ? null : () => _save(store),
-                child: Text(_isNew ? 'Create task' : 'Save changes'),
+                child: Text(_isNew ? l10n.taskDetailCreateButton : l10n.taskDetailSaveButton),
               ),
             ),
           ],
         ],
       ),
     );
+  }
+
+  String _quickToggleLabel(QuickToggleAction action, AppLocalizations l10n) {
+    switch (action) {
+      case QuickToggleAction.backToPending:
+        return l10n.quickToggleBackToPending;
+      case QuickToggleAction.markMyPartDone:
+        return l10n.quickToggleMarkMyPartDone;
+      case QuickToggleAction.markAsPending:
+        return l10n.quickToggleMarkAsPending;
+      case QuickToggleAction.markAsComplete:
+        return l10n.quickToggleMarkAsComplete;
+    }
   }
 }
 
@@ -398,12 +418,13 @@ class _DueDateField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return InkWell(
       onTap: onTap,
       child: Row(
         children: [
           Expanded(
-            child: Text(value == null ? 'Tap to set' : formatDateTime(value!)),
+            child: Text(value == null ? l10n.taskDetailTapToSet : formatDateTime(value!)),
           ),
           if (value != null)
             IconButton(

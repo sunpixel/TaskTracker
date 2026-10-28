@@ -1,9 +1,11 @@
 import 'dart:convert';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../l10n/generated/app_localizations.dart';
 import '../models/task.dart';
 
 /// Local notifications for tasks: two tied to a due date (6h and 1h
@@ -21,6 +23,23 @@ class NotificationService {
 
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+
+  /// This service has no `BuildContext` (it's triggered from `TaskStore`/
+  /// `ServerSyncService`, not a widget), so it can't read the in-app
+  /// language override the Profile screen sets — it always renders
+  /// notification text in the device's own system language instead,
+  /// falling back to English if that language isn't one of the three
+  /// supported. This is a deliberate scope simplification: the OS tray
+  /// itself (timestamps, action buttons) already renders in the system
+  /// language regardless of any in-app override, so keeping notification
+  /// body text consistent with that is more coherent than threading the
+  /// in-app locale through here just for two strings.
+  AppLocalizations _l10n() {
+    final deviceLocale = WidgetsBinding.instance.platformDispatcher.locale;
+    final supported = AppLocalizations.supportedLocales
+        .any((l) => l.languageCode == deviceLocale.languageCode);
+    return lookupAppLocalizations(supported ? deviceLocale : const Locale('en'));
+  }
 
   static const _dueChannel = AndroidNotificationChannel(
     'task_due_reminders',
@@ -126,12 +145,13 @@ class NotificationService {
     final now = DateTime.now();
     final sixHoursBefore = due.subtract(const Duration(hours: 6));
     final oneHourBefore = due.subtract(const Duration(hours: 1));
+    final l10n = _l10n();
 
     if (sixHoursBefore.isAfter(now)) {
       await _scheduleAt(
         id: _sixHourReminderId(task.id),
         when: sixHoursBefore,
-        title: '"${task.title}" is due in 6 hours',
+        title: l10n.notificationDueIn(task.title, 6),
         channel: _dueChannel,
         priority: Priority.defaultPriority,
         interruptionLevel: InterruptionLevel.active,
@@ -141,7 +161,7 @@ class NotificationService {
       await _scheduleAt(
         id: _oneHourReminderId(task.id),
         when: oneHourBefore,
-        title: '"${task.title}" is due in 1 hour',
+        title: l10n.notificationDueIn(task.title, 1),
         channel: _urgentChannel,
         priority: Priority.high,
         // Needs the 'Time Sensitive Notifications' capability enabled in
@@ -193,7 +213,7 @@ class NotificationService {
   Future<void> showAssignedNotification(Task task) async {
     await _plugin.show(
       id: _assignedNotificationId(task.id),
-      title: 'New task assigned to you',
+      title: _l10n().notificationAssignedTitle,
       body: task.title,
       notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(

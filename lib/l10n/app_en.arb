@@ -1,0 +1,153 @@
+{
+  "@@locale": "en",
+
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "add": "Add",
+  "close": "Close",
+
+  "navHome": "Home",
+  "navTasks": "Tasks",
+  "navProfile": "Profile",
+
+  "homeUpNext": "Up next",
+  "homeNothingDue": "Nothing due. Nice work!",
+
+  "taskFilterAll": "All",
+  "taskFilterAssignedToMe": "Assigned to me",
+  "taskFilterMine": "Mine",
+
+  "tasksNoMatch": "No tasks match this filter.",
+  "tasksCurrentSection": "Current Tasks",
+  "tasksCompletedSection": "Completed Tasks",
+  "tasksNothingCurrent": "Nothing current.",
+  "tasksNothingCompleted": "Nothing completed yet.",
+
+  "taskNoDueDate": "No due date",
+  "taskUnassigned": "Unassigned",
+  "taskYou": "You",
+
+  "taskDetailNewTitle": "New task",
+  "taskDetailMissing": "This task no longer exists.",
+  "taskDetailTaskNameLabel": "Task name",
+  "taskDetailDescriptionHeading": "Description",
+  "taskDetailDescriptionHint": "What needs to be done?",
+  "taskDetailNoDescription": "No description.",
+  "taskDetailCreatedLabel": "Created",
+  "taskDetailDueLabel": "Due",
+  "taskDetailAssignerLabel": "Assigner",
+  "taskDetailAssigneeLabel": "Assignee",
+  "taskDetailTapToSet": "Tap to set",
+  "taskDetailAddToCalendar": "Add to calendar",
+  "taskDetailStatusHeading": "Status",
+  "taskDetailCreateButton": "Create task",
+  "taskDetailSaveButton": "Save changes",
+  "assignToTitle": "Assign to",
+
+  "calendarAdded": "Opened in your calendar app.",
+  "calendarNoDueDate": "Set a due date first.",
+  "calendarUnsupported": "Adding to calendar isn't supported on this platform yet.",
+  "calendarFailed": "Could not add this to your calendar.",
+
+  "titleRequiredError": "Task name is required.",
+  "dueDateTooSoonError": "Due time must be at least a minute after the creation time.",
+
+  "quickToggleBackToPending": "Back to pending",
+  "quickToggleMarkMyPartDone": "Mark my part done",
+  "quickToggleMarkAsPending": "Mark as pending",
+  "quickToggleMarkAsComplete": "Mark as complete",
+
+  "taskStatusAssigned": "Assigned",
+  "taskStatusWorking": "Working",
+  "taskStatusPending": "Pending",
+  "taskStatusOnReview": "On Review",
+  "taskStatusCompleted": "Complete",
+  "taskStatusToBeRedone": "To be redone",
+
+  "categoryEditorNoCategories": "No categories",
+  "categoryEditorAddTitle": "Add category",
+  "categoryEditorExisting": "Existing categories",
+  "categoryEditorOrCreateNew": "Or create a new one",
+  "categoryEditorNameHint": "Category name",
+
+  "assigneePickerMyself": "Myself",
+  "assigneePickerSearchPrompt": "Not in your contacts? Search by username:",
+  "assigneePickerLoginPrompt": "Log in to search for other accounts.",
+
+  "searchUsernameLabel": "Username",
+  "searchHintMinChars": "Type at least {count} characters",
+  "@searchHintMinChars": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "searchNoResults": "No matching user found.",
+
+  "profileTitle": "Profile",
+  "profileNotLoggedIn": "Not logged in",
+  "profileLogIn": "Log in",
+  "profileLogOut": "Log out",
+  "profileContacts": "Contacts",
+  "profileAddContactTooltip": "Add contact",
+  "profileNoContacts": "No contacts yet.",
+  "profileDeleteContactTooltip": "Delete contact",
+  "profileDeleteContactTitle": "Delete contact?",
+  "profileDeleteContactBody": "Do you really wish to delete \"{name}\" from contacts?",
+  "@profileDeleteContactBody": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "profileWhoCanFindYou": "Who can find you",
+  "profilePrivacyUpdateError": "Couldn't update this — check your connection and try again.",
+  "profileAppearance": "Appearance",
+  "profileLanguage": "Language",
+  "profileLanguageSystemDefault": "System default",
+
+  "privacyAllowAllLabel": "Allow all searches",
+  "privacyAllowAllDescription": "Anyone can find you by typing part of your username.",
+  "privacyExactUsernameLabel": "Exact username only",
+  "privacyExactUsernameDescription": "Only findable if someone types your exact username.",
+  "privacyContactsPhoneLabel": "Contacts/phone only",
+  "privacyContactsPhoneDescription": "Not findable by username at all — only by your exact phone number.",
+
+  "countryUnitedStates": "United States (+1)",
+  "countryRussia": "Russia (+7)",
+  "countryNetherlands": "Netherlands (+31)",
+
+  "authCreateAccountTitle": "Create account",
+  "authLogInTitle": "Log in",
+  "authUsernameLabel": "Username",
+  "authPasswordLabel": "Password",
+  "authEmailLabel": "Email",
+  "authFullNameLabel": "Full name (optional)",
+  "authPhoneLabel": "Phone (optional)",
+  "authCountryLabel": "Country",
+  "authUsernamePasswordRequired": "Username and password are required.",
+  "authPickCountry": "Pick a country for the phone number.",
+  "authSwitchToLogin": "Already have an account? Log in",
+  "authSwitchToSignUp": "New here? Create an account",
+
+  "addContactTitle": "Add contact",
+  "addContactNotOnApp": "Not on the app yet? Add them anyway",
+  "addContactSearchInstead": "Search for a real account instead",
+  "addContactDescriptionLabel": "Description (optional)",
+  "addContactUsernameEmailRequired": "Username and email are required.",
+  "addContactFailed": "Could not add that contact.",
+
+  "emailRequired": "Email is required.",
+  "emailInvalid": "That doesn't look like a valid email address.",
+  "phoneLengthError": "A {country} phone number should have {expected} digits (got {actual}).",
+  "@phoneLengthError": {
+    "placeholders": {
+      "country": { "type": "String" },
+      "expected": { "type": "int" },
+      "actual": { "type": "int" }
+    }
+  },
+
+  "notificationDueIn": "\"{title}\" is due in {hours, plural, =1{1 hour} other{{hours} hours}}",
+  "@notificationDueIn": {
+    "placeholders": {
+      "title": { "type": "String" },
+      "hours": { "type": "num" }
+    }
+  },
+  "notificationAssignedTitle": "New task assigned to you"
+}

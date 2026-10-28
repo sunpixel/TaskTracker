@@ -1,0 +1,154 @@
+{
+  "@@locale": "ru",
+
+  "cancel": "Отмена",
+  "delete": "Удалить",
+  "add": "Добавить",
+  "close": "Закрыть",
+
+  "navHome": "Главная",
+  "navTasks": "Задачи",
+  "navProfile": "Профиль",
+
+  "homeUpNext": "Скоро",
+  "homeNothingDue": "Нет срочных задач. Отличная работа!",
+
+  "taskFilterAll": "Все",
+  "taskFilterAssignedToMe": "Назначено мне",
+  "taskFilterMine": "Мои",
+
+  "tasksNoMatch": "Нет задач, соответствующих фильтру.",
+  "tasksCurrentSection": "Текущие задачи",
+  "tasksCompletedSection": "Завершённые задачи",
+  "tasksNothingCurrent": "Текущих задач нет.",
+  "tasksNothingCompleted": "Пока ничего не завершено.",
+
+  "taskNoDueDate": "Нет срока",
+  "taskUnassigned": "Не назначено",
+  "taskYou": "Вы",
+
+  "taskDetailNewTitle": "Новая задача",
+  "taskDetailMissing": "Эта задача больше не существует.",
+  "taskDetailTaskNameLabel": "Название задачи",
+  "taskDetailDescriptionHeading": "Описание",
+  "taskDetailDescriptionHint": "Что нужно сделать?",
+  "taskDetailNoDescription": "Нет описания.",
+  "taskDetailCreatedLabel": "Создано",
+  "taskDetailDueLabel": "Срок",
+  "taskDetailAssignerLabel": "Поручил",
+  "taskDetailAssigneeLabel": "Исполнитель",
+  "taskDetailTapToSet": "Нажмите, чтобы указать",
+  "taskDetailAddToCalendar": "Добавить в календарь",
+  "taskDetailStatusHeading": "Статус",
+  "taskDetailCreateButton": "Создать задачу",
+  "taskDetailSaveButton": "Сохранить изменения",
+  "assignToTitle": "Назначить",
+
+  "calendarAdded": "Открыто в приложении календаря.",
+  "calendarNoDueDate": "Сначала укажите срок выполнения.",
+  "calendarUnsupported": "Добавление в календарь пока не поддерживается на этой платформе.",
+  "calendarFailed": "Не удалось добавить это в календарь.",
+
+  "titleRequiredError": "Название задачи обязательно.",
+  "dueDateTooSoonError": "Срок выполнения должен быть минимум на минуту позже времени создания.",
+
+  "quickToggleBackToPending": "Вернуть в ожидание",
+  "quickToggleMarkMyPartDone": "Отметить свою часть выполненной",
+  "quickToggleMarkAsPending": "Отметить как в ожидании",
+  "quickToggleMarkAsComplete": "Отметить как выполненное",
+
+  "taskStatusAssigned": "Назначено",
+  "taskStatusWorking": "В работе",
+  "taskStatusPending": "В ожидании",
+  "taskStatusOnReview": "На проверке",
+  "taskStatusCompleted": "Выполнено",
+  "taskStatusToBeRedone": "На переделку",
+
+  "categoryEditorNoCategories": "Нет категорий",
+  "categoryEditorAddTitle": "Добавить категорию",
+  "categoryEditorExisting": "Существующие категории",
+  "categoryEditorOrCreateNew": "Или создайте новую",
+  "categoryEditorNameHint": "Название категории",
+
+  "assigneePickerMyself": "Себе",
+  "assigneePickerSearchPrompt": "Не в контактах? Найдите по имени пользователя:",
+  "assigneePickerLoginPrompt": "Войдите, чтобы искать другие аккаунты.",
+
+  "searchUsernameLabel": "Имя пользователя",
+  "searchHintMinChars": "Введите не менее {count} символов",
+  "searchNoResults": "Пользователь не найден.",
+
+  "profileTitle": "Профиль",
+  "profileNotLoggedIn": "Вы не вошли в систему",
+  "profileLogIn": "Войти",
+  "profileLogOut": "Выйти",
+  "profileContacts": "Контакты",
+  "profileAddContactTooltip": "Добавить контакт",
+  "profileNoContacts": "Пока нет контактов.",
+  "profileDeleteContactTooltip": "Удалить контакт",
+  "profileDeleteContactTitle": "Удалить контакт?",
+  "profileDeleteContactBody": "Вы действительно хотите удалить «{name}» из контактов?",
+  "profileWhoCanFindYou": "Кто может вас найти",
+  "profilePrivacyUpdateError": "Не удалось обновить настройку — проверьте соединение и попробуйте снова.",
+  "profileAppearance": "Внешний вид",
+  "profileLanguage": "Язык",
+  "profileLanguageSystemDefault": "Как в системе",
+
+  "privacyAllowAllLabel": "Разрешить любой поиск",
+  "privacyAllowAllDescription": "Любой может найти вас, введя часть имени пользователя.",
+  "privacyExactUsernameLabel": "Только по точному имени",
+  "privacyExactUsernameDescription": "Вас можно найти, только если ввести ваше имя пользователя полностью.",
+  "privacyContactsPhoneLabel": "Только контакты/телефон",
+  "privacyContactsPhoneDescription": "Вас нельзя найти по имени пользователя — только по точному номеру телефона.",
+
+  "countryUnitedStates": "США (+1)",
+  "countryRussia": "Россия (+7)",
+  "countryNetherlands": "Нидерланды (+31)",
+
+  "authCreateAccountTitle": "Создать аккаунт",
+  "authLogInTitle": "Вход",
+  "authUsernameLabel": "Имя пользователя",
+  "authPasswordLabel": "Пароль",
+  "authEmailLabel": "Email",
+  "authFullNameLabel": "Полное имя (необязательно)",
+  "authPhoneLabel": "Телефон (необязательно)",
+  "authCountryLabel": "Страна",
+  "authUsernamePasswordRequired": "Введите имя пользователя и пароль.",
+  "authPickCountry": "Укажите страну для номера телефона.",
+  "authSwitchToLogin": "Уже есть аккаунт? Войти",
+  "authSwitchToSignUp": "Впервые здесь? Создать аккаунт",
+
+  "addContactTitle": "Добавить контакт",
+  "addContactNotOnApp": "Ещё не в приложении? Добавить всё равно",
+  "addContactSearchInstead": "Искать существующий аккаунт",
+  "addContactDescriptionLabel": "Описание (необязательно)",
+  "addContactUsernameEmailRequired": "Введите имя пользователя и email.",
+  "addContactFailed": "Не удалось добавить этот контакт.",
+
+  "emailRequired": "Укажите email.",
+  "emailInvalid": "Это не похоже на настоящий email-адрес.",
+  "phoneLengthError": "Номер телефона для страны «{country}» должен содержать {expected} цифр (введено {actual}).",
+
+  "notificationDueIn": "«{title}» нужно выполнить через {hours, plural, =1{1 час} few{{hours} часа} many{{hours} часов} other{{hours} часа}}",
+  "notificationAssignedTitle": "Вам назначена новая задача",
+
+  "@notificationDueIn": {
+    "placeholders": {
+      "title": { "type": "String" },
+      "hours": { "type": "num" }
+    }
+  },
+  "@searchHintMinChars": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "@profileDeleteContactBody": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "@phoneLengthError": {
+    "placeholders": {
+      "country": { "type": "String" },
+      "expected": { "type": "int" },
+      "actual": { "type": "int" }
+    }
+  }
+}

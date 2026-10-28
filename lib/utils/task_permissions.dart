@@ -51,11 +51,15 @@ bool? quickToggleValue(Task task, String currentUserId) {
   return false;
 }
 
-/// Label for the quick-toggle action button on the task detail screen,
-/// matching what [nextStatusOnQuickToggle] is about to do.
-String quickToggleActionLabel(Task task, String currentUserId) {
+/// What the quick-toggle action button on the task detail screen is
+/// about to do, mirroring [nextStatusOnQuickToggle] — returned as an
+/// enum rather than an English label so the UI layer localizes it (see
+/// `DueDateError`'s doc in task_validators.dart for why).
+enum QuickToggleAction { backToPending, markMyPartDone, markAsPending, markAsComplete }
+
+QuickToggleAction quickToggleActionFor(Task task, String currentUserId) {
   if (_isDelegatedToMe(task, currentUserId)) {
-    return task.status == TaskStatus.onReview ? 'Back to pending' : 'Mark my part done';
+    return task.status == TaskStatus.onReview ? QuickToggleAction.backToPending : QuickToggleAction.markMyPartDone;
   }
-  return task.isCompleted ? 'Mark as pending' : 'Mark as complete';
+  return task.isCompleted ? QuickToggleAction.markAsPending : QuickToggleAction.markAsComplete;
 }

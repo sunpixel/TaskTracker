@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/task_store_scope.dart';
 import '../data/user_store_scope.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../models/task.dart';
 import '../navigation/app_nav_scope.dart';
 import '../utils/sort_tasks.dart';
@@ -19,6 +20,7 @@ class HomeScreen extends StatelessWidget {
     final store = TaskStoreScope.of(context);
     final navController = AppNavScope.of(context);
     final currentUserId = UserStoreScope.of(context).effectiveUserId;
+    final l10n = AppLocalizations.of(context)!;
 
     if (store.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -31,7 +33,7 @@ class HomeScreen extends StatelessWidget {
     final mine = pending.where((t) => t.assignmentFor(currentUserId) == TaskAssignment.mine).length;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Home')),
+      appBar: AppBar(title: Text(l10n.navHome)),
       body: CustomScrollView(
         slivers: [
           SliverPadding(
@@ -42,10 +44,10 @@ class HomeScreen extends StatelessWidget {
                   Expanded(
                     child: _SummaryCard(
                       icon: Icons.assignment_ind_outlined,
-                      label: 'Assigned to me',
+                      label: l10n.taskFilterAssignedToMe,
                       count: assignedToMe,
                       onTap: () => navController.goToTasksTab(
-                        filter: const TaskFilter.assignedToMe(),
+                        filter: TaskFilter.assignedToMe(l10n.taskFilterAssignedToMe),
                       ),
                     ),
                   ),
@@ -53,10 +55,10 @@ class HomeScreen extends StatelessWidget {
                   Expanded(
                     child: _SummaryCard(
                       icon: Icons.edit_note_outlined,
-                      label: 'Mine',
+                      label: l10n.taskFilterMine,
                       count: mine,
                       onTap: () => navController.goToTasksTab(
-                        filter: const TaskFilter.mine(),
+                        filter: TaskFilter.mine(l10n.taskFilterMine),
                       ),
                     ),
                   ),
@@ -67,13 +69,13 @@ class HomeScreen extends StatelessWidget {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             sliver: SliverToBoxAdapter(
-              child: Text('Up next', style: Theme.of(context).textTheme.titleMedium),
+              child: Text(l10n.homeUpNext, style: Theme.of(context).textTheme.titleMedium),
             ),
           ),
           if (pending.isEmpty)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               hasScrollBody: false,
-              child: Center(child: Text('Nothing due. Nice work!')),
+              child: Center(child: Text(l10n.homeNothingDue)),
             )
           else
             SliverList.builder(
