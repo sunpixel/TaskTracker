@@ -35,6 +35,9 @@ const _createTasksTable = '''
 // `profile_picture` defaults to NULL rather than a literal default blob —
 // the app treats NULL as "show the built-in placeholder icon", which is
 // simpler and just as effective as a real stored default image.
+// `phone` is digits-only (the national number, no dial code, no
+// formatting) — `country_code` holds the dial code half, as an enum
+// ordinal. See `models/country_code.dart` / the server's PhoneNumbers.
 const _createUsersTable = '''
   CREATE TABLE users (
     id TEXT PRIMARY KEY,
@@ -42,6 +45,7 @@ const _createUsersTable = '''
     full_name TEXT,
     email TEXT NOT NULL,
     phone TEXT,
+    country_code INTEGER,
     profile_picture BLOB,
     description TEXT,
     is_me INTEGER NOT NULL DEFAULT 0
@@ -78,7 +82,7 @@ class AppDatabase {
 
     final db = await openDatabase(
       dbPath,
-      version: 4,
+      version: 5,
       onCreate: (db, version) async {
         await db.execute(_createTasksTable);
         await db.execute(_createUsersTable);
@@ -102,6 +106,11 @@ class AppDatabase {
           await db.execute(_createTasksTable);
           await db.execute('DROP TABLE IF EXISTS users');
           await db.execute(_createUsersTable);
+        }
+        if (oldVersion < 5) {
+          // Purely additive — existing user/contact rows just get a NULL
+          // country code until re-synced from the server.
+          await db.execute('ALTER TABLE users ADD COLUMN country_code INTEGER');
         }
       },
     );

@@ -37,12 +37,17 @@ class ApiClient {
 
   // --- Auth ---
 
+  /// [phone], if given, should already be digits-only (the national
+  /// number, no dial code) — see `utils/input_validators.dart`.
+  /// [countryCode] is that enum's ordinal (see `models/country_code.dart`),
+  /// required by the server whenever [phone] is non-null.
   Future<Map<String, dynamic>> signup({
     required String userName,
     required String email,
     required String password,
     String? fullName,
     String? phone,
+    int? countryCode,
   }) async {
     final res = await _http.post(
       _uri('/auth/signup'),
@@ -53,6 +58,7 @@ class ApiClient {
         'password': password,
         'fullName': fullName,
         'phone': phone,
+        'countryCode': countryCode,
       }),
     );
     return _decodeMap(res);
@@ -94,8 +100,21 @@ class ApiClient {
     return _decodeMap(res);
   }
 
-  Future<List<dynamic>> searchUsers({required String accessToken, required String username}) async {
-    final res = await _http.get(_uri('/users/search', {'username': username}), headers: _headers(accessToken));
+  /// [searchPrivacy] is the enum's ordinal (see `models/search_privacy.dart`).
+  Future<Map<String, dynamic>> updatePrivacy({required String accessToken, required int searchPrivacy}) async {
+    final res = await _http.put(
+      _uri('/users/me/privacy'),
+      headers: _headers(accessToken),
+      body: jsonEncode({'searchPrivacy': searchPrivacy}),
+    );
+    return _decodeMap(res);
+  }
+
+  /// [query] can be a username (partial or exact, depending on the
+  /// target's privacy setting) or a phone number (exact match only) —
+  /// the server auto-detects which based on its shape.
+  Future<List<dynamic>> searchUsers({required String accessToken, required String query}) async {
+    final res = await _http.get(_uri('/users/search', {'query': query}), headers: _headers(accessToken));
     return _decodeList(res);
   }
 

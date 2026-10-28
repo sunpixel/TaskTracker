@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/user_store.dart';
 import '../data/user_store_scope.dart';
+import '../models/search_privacy.dart';
 import '../models/user.dart';
 import '../theme/theme_controller.dart';
 import '../widgets/add_contact_dialog.dart';
@@ -69,6 +70,10 @@ class ProfileScreen extends StatelessWidget {
             ),
           const SizedBox(height: 24),
           _ContactsSection(store: store),
+          if (me != null) ...[
+            const SizedBox(height: 24),
+            _PrivacySection(store: store, me: me),
+          ],
           const SizedBox(height: 24),
           _AppearanceSection(themeController: themeController),
         ],
@@ -169,6 +174,68 @@ class _ContactRow extends StatelessWidget {
         context: context,
         builder: (context) => ContactDetailDialog(contact: contact),
       ),
+    );
+  }
+}
+
+/// Who can find you via search (GET /users/search) — see
+/// `models/search_privacy.dart` for what each tier means. Only shown
+/// when logged in; the setting is meaningless otherwise.
+class _PrivacySection extends StatefulWidget {
+  final UserStore store;
+  final User me;
+
+  const _PrivacySection({required this.store, required this.me});
+
+  @override
+  State<_PrivacySection> createState() => _PrivacySectionState();
+}
+
+class _PrivacySectionState extends State<_PrivacySection> {
+  bool _saving = false;
+
+  Future<void> _changeTo(SearchPrivacy? privacy) async {
+    if (privacy == null || _saving) return;
+    setState(() => _saving = true);
+    final ok = await widget.store.updatePrivacy(privacy);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Couldn't update this — check your connection and try again.")),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    // Falls back to the server's own default if the cached profile
+    // somehow doesn't have it yet (e.g. right after a fresh signup).
+    final current = widget.me.searchPrivacy ?? SearchPrivacy.exactUsernameOnly;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Who can find you', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 4),
+        Card(
+          child: RadioGroup<SearchPrivacy>(
+            groupValue: current,
+            onChanged: _changeTo, // the _saving guard inside stops double-submission
+            child: Column(
+              children: [
+                for (final tier in SearchPrivacy.values)
+                  RadioListTile<SearchPrivacy>(
+                    value: tier,
+                    title: Text(tier.label),
+                    subtitle: Text(tier.description),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../models/country_code.dart';
+import '../models/search_privacy.dart';
 import '../models/user.dart';
 import '../services/api_client.dart';
 import '../services/auth_token_store.dart';
@@ -97,6 +99,7 @@ class UserStore extends ChangeNotifier {
     required String password,
     String? fullName,
     String? phone,
+    CountryCode? countryCode,
   }) async {
     try {
       await _applyAuthResponse(await _api.signup(
@@ -105,6 +108,7 @@ class UserStore extends ChangeNotifier {
         password: password,
         fullName: fullName,
         phone: phone,
+        countryCode: countryCode?.index,
       ));
       _authError = null;
       notifyListeners();
@@ -177,6 +181,24 @@ class UserStore extends ChangeNotifier {
     return 'Could not reach the server. Check your connection and try again.';
   }
 
+  /// Changes who can find your account via search. No-op if not logged
+  /// in — there's no account to change this on.
+  Future<bool> updatePrivacy(SearchPrivacy privacy) async {
+    if (!isLoggedIn) return false;
+    final token = await ensureFreshAccessToken();
+    if (token == null) return false;
+    try {
+      final json = await _api.updatePrivacy(accessToken: token, searchPrivacy: privacy.index);
+      final updated = User.fromServerJson(json, isMe: true);
+      _currentUser = updated;
+      await _repository.upsertMe(updated);
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   // --- Contacts ---
 
   Future<List<User>> searchUsers(String query) async {
@@ -185,7 +207,7 @@ class UserStore extends ChangeNotifier {
     final token = await ensureFreshAccessToken();
     if (token == null) return [];
     try {
-      final results = await _api.searchUsers(accessToken: token, username: trimmed);
+      final results = await _api.searchUsers(accessToken: token, query: trimmed);
       return results.cast<Map<String, dynamic>>().map(User.fromServerJson).toList();
     } catch (_) {
       return [];

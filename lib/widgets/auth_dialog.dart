@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../data/user_store.dart';
+import '../models/country_code.dart';
+import '../utils/input_validators.dart';
 
 /// Combined log in / sign up dialog, against the real backend now.
 class AuthDialog extends StatefulWidget {
@@ -16,6 +18,7 @@ class _AuthDialogState extends State<AuthDialog> {
   bool _signUpMode = false;
   bool _submitting = false;
   String? _error;
+  CountryCode? _countryCode = CountryCode.unitedStates;
 
   final _userNameController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -41,9 +44,29 @@ class _AuthDialogState extends State<AuthDialog> {
       setState(() => _error = 'Username and password are required.');
       return;
     }
-    if (_signUpMode && _emailController.text.trim().isEmpty) {
-      setState(() => _error = 'Email is required.');
-      return;
+
+    String? phoneDigits;
+    if (_signUpMode) {
+      final emailError = validateEmail(_emailController.text);
+      if (emailError != null) {
+        setState(() => _error = emailError);
+        return;
+      }
+
+      final rawPhone = _phoneController.text.trim();
+      if (rawPhone.isNotEmpty) {
+        phoneDigits = phoneDigitsOnly(rawPhone);
+        final country = _countryCode;
+        if (country == null) {
+          setState(() => _error = 'Pick a country for the phone number.');
+          return;
+        }
+        final phoneError = validatePhoneDigits(phoneDigits, country);
+        if (phoneError != null) {
+          setState(() => _error = phoneError);
+          return;
+        }
+      }
     }
 
     setState(() {
@@ -57,7 +80,8 @@ class _AuthDialogState extends State<AuthDialog> {
             password: password,
             email: _emailController.text.trim(),
             fullName: _fullNameController.text.trim().isEmpty ? null : _fullNameController.text.trim(),
-            phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+            phone: phoneDigits,
+            countryCode: phoneDigits == null ? null : _countryCode,
           )
         : await widget.store.login(userName, password);
 
@@ -96,6 +120,7 @@ class _AuthDialogState extends State<AuthDialog> {
               TextField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Email'),
+                keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 8),
               TextField(
@@ -103,9 +128,31 @@ class _AuthDialogState extends State<AuthDialog> {
                 decoration: const InputDecoration(labelText: 'Full name (optional)'),
               ),
               const SizedBox(height: 8),
-              TextField(
-                controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Phone (optional)'),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: DropdownButtonFormField<CountryCode>(
+                      initialValue: _countryCode,
+                      decoration: const InputDecoration(labelText: 'Country'),
+                      items: CountryCode.values
+                          .map((c) => DropdownMenuItem(value: c, child: Text(c.label, overflow: TextOverflow.ellipsis)))
+                          .toList(),
+                      onChanged: (value) => setState(() => _countryCode = value),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: TextField(
+                      controller: _phoneController,
+                      decoration: const InputDecoration(labelText: 'Phone (optional)'),
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: [digitsOnlyInputFormatter],
+                    ),
+                  ),
+                ],
               ),
             ],
             if (_error != null) ...[

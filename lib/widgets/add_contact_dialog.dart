@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../data/user_store.dart';
+import '../models/country_code.dart';
 import '../models/user.dart';
-import 'user_avatar.dart';
+import '../utils/input_validators.dart';
+import 'debounced_user_search.dart';
 
 /// Dialog for adding a contact. Logged in: searches the server by
 /// username first — a contact has to be a real account now, since the
@@ -22,17 +24,16 @@ class AddContactDialog extends StatefulWidget {
 }
 
 class _AddContactDialogState extends State<AddContactDialog> {
-  final _userNameController = TextEditingController();
-  bool _searching = false;
-  List<User>? _searchResults;
   bool _showPlaceholderForm = false;
 
   // Placeholder-only fields.
+  final _userNameController = TextEditingController();
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _descriptionController = TextEditingController();
   String? _error;
+  CountryCode? _countryCode = CountryCode.unitedStates;
 
   @override
   void dispose() {
@@ -42,21 +43,6 @@ class _AddContactDialogState extends State<AddContactDialog> {
     _phoneController.dispose();
     _descriptionController.dispose();
     super.dispose();
-  }
-
-  Future<void> _search() async {
-    final query = _userNameController.text.trim();
-    if (query.isEmpty) return;
-    setState(() {
-      _searching = true;
-      _error = null;
-    });
-    final results = await widget.userStore.searchUsers(query);
-    if (!mounted) return;
-    setState(() {
-      _searching = false;
-      _searchResults = results;
-    });
   }
 
   Future<void> _addReal(User user) async {
@@ -75,12 +61,35 @@ class _AddContactDialogState extends State<AddContactDialog> {
       setState(() => _error = 'Username and email are required.');
       return;
     }
+    final emailError = validateEmail(email);
+    if (emailError != null) {
+      setState(() => _error = emailError);
+      return;
+    }
+
+    String? phoneDigits;
+    final rawPhone = _phoneController.text.trim();
+    if (rawPhone.isNotEmpty) {
+      phoneDigits = phoneDigitsOnly(rawPhone);
+      final country = _countryCode;
+      if (country == null) {
+        setState(() => _error = 'Pick a country for the phone number.');
+        return;
+      }
+      final phoneError = validatePhoneDigits(phoneDigits, country);
+      if (phoneError != null) {
+        setState(() => _error = phoneError);
+        return;
+      }
+    }
+
     await widget.userStore.addLocalPlaceholderContact(User(
       id: const Uuid().v4(),
       userName: userName,
       email: email,
       fullName: _fullNameController.text.trim().isEmpty ? null : _fullNameController.text.trim(),
-      phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+      phone: phoneDigits,
+      countryCode: phoneDigits == null ? null : _countryCode,
       description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
     ));
     if (mounted) Navigator.of(context).pop();
@@ -99,40 +108,10 @@ class _AddContactDialogState extends State<AddContactDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (isLoggedIn && !_showPlaceholderForm) ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _userNameController,
-                      decoration: const InputDecoration(labelText: 'Username'),
-                      onSubmitted: (_) => _search(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: _searching ? null : _search,
-                    child: const Text('Search'),
-                  ),
-                ],
+              DebouncedUserSearch(
+                userStore: widget.userStore,
+                onSelected: _addReal,
               ),
-              if (_searching) ...[
-                const SizedBox(height: 12),
-                const Center(child: CircularProgressIndicator()),
-              ],
-              if (_searchResults != null) ...[
-                const SizedBox(height: 8),
-                if (_searchResults!.isEmpty)
-                  Text('No matching user found.', style: theme.textTheme.bodySmall)
-                else
-                  for (final user in _searchResults!)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: UserAvatar(imageBytes: user.profilePicture, radius: 18),
-                      title: Text(user.userName),
-                      subtitle: user.fullName != null ? Text(user.fullName!) : null,
-                      onTap: () => _addReal(user),
-                    ),
-              ],
               const SizedBox(height: 8),
               TextButton(
                 onPressed: () => setState(() => _showPlaceholderForm = true),
@@ -152,6 +131,7 @@ class _AddContactDialogState extends State<AddContactDialog> {
               TextField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Email'),
+                keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 8),
               TextField(
@@ -159,9 +139,31 @@ class _AddContactDialogState extends State<AddContactDialog> {
                 decoration: const InputDecoration(labelText: 'Full name (optional)'),
               ),
               const SizedBox(height: 8),
-              TextField(
-                controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Phone (optional)'),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: DropdownButtonFormField<CountryCode>(
+                      initialValue: _countryCode,
+                      decoration: const InputDecoration(labelText: 'Country'),
+                      items: CountryCode.values
+                          .map((c) => DropdownMenuItem(value: c, child: Text(c.label, overflow: TextOverflow.ellipsis)))
+                          .toList(),
+                      onChanged: (value) => setState(() => _countryCode = value),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: TextField(
+                      controller: _phoneController,
+                      decoration: const InputDecoration(labelText: 'Phone (optional)'),
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: [digitsOnlyInputFormatter],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               TextField(
