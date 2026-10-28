@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../data/task_store.dart';
 import '../data/task_store_scope.dart';
 import '../data/user_store_scope.dart';
+import '../models/task.dart';
 import '../navigation/app_nav_controller.dart';
 import '../navigation/app_nav_scope.dart';
 import '../utils/sort_tasks.dart';
@@ -15,6 +17,12 @@ import 'task_detail_screen.dart';
 /// time, mixing assignment ("Assigned to me" / "Mine") and category into a
 /// single row. This is the first iteration — multi-select, search, and
 /// sorting are natural next steps once the design settles.
+///
+/// Split into two collapsible sections rather than one flat list: a
+/// single by-deadline sort across *all* tasks put newly-created,
+/// no-due-date tasks below every completed task that happened to have
+/// one, which read as broken. Current and completed tasks now have their
+/// own sort entirely, so that can't happen.
 ///
 /// Pull-to-refresh here is one of the three sync triggers (alongside
 /// right-after-any-push and the 10-minute timer) — see `TaskStore`.
@@ -82,9 +90,17 @@ class _TasksScreenState extends State<TasksScreen> {
       for (final category in categories) TaskFilter.category(category, category),
     ];
 
-    final filtered = sortByDeadline(
-      allTasks.where((t) => _selected.matches(t, currentUserId)).toList(),
-    );
+    final filtered = allTasks.where((t) => _selected.matches(t, currentUserId)).toList();
+
+    // Same sort as Home for current tasks (soonest deadline first).
+    final current = sortByDeadline(filtered.where((t) => !t.isCompleted).toList());
+
+    // Completed tasks aren't ranked by deadline at all — most recently
+    // completed first. There's no dedicated "completed at" timestamp;
+    // `updatedAt` is a reliable stand-in here since completing a task is
+    // itself the edit that bumps it.
+    final completed = filtered.where((t) => t.isCompleted).toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 
     return Scaffold(
       appBar: AppBar(
@@ -120,22 +136,25 @@ class _TasksScreenState extends State<TasksScreen> {
                         Center(child: Text('No tasks match this filter.')),
                       ],
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      itemCount: filtered.length,
-                      itemBuilder: (context, index) {
-                        final task = filtered[index];
-                        return TaskCard(
-                          task: task,
+                  : ListView(
+                      children: [
+                        _TaskSection(
+                          title: 'Current Tasks',
+                          tasks: current,
                           currentUserId: currentUserId,
-                          onToggle: () => store.quickToggle(task),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => TaskDetailScreen(taskId: task.id),
-                            ),
-                          ),
-                        );
-                      },
+                          store: store,
+                          initiallyExpanded: true,
+                          emptyLabel: 'Nothing current.',
+                        ),
+                        _TaskSection(
+                          title: 'Completed Tasks',
+                          tasks: completed,
+                          currentUserId: currentUserId,
+                          store: store,
+                          initiallyExpanded: false,
+                          emptyLabel: 'Nothing completed yet.',
+                        ),
+                      ],
                     ),
             ),
           ),
@@ -147,6 +166,64 @@ class _TasksScreenState extends State<TasksScreen> {
         ),
         child: const Icon(Icons.add),
       ),
+    );
+  }
+}
+
+class _TaskSection extends StatelessWidget {
+  final String title;
+  final List<Task> tasks;
+  final String currentUserId;
+  final TaskStore store;
+  final bool initiallyExpanded;
+  final String emptyLabel;
+
+  const _TaskSection({
+    required this.title,
+    required this.tasks,
+    required this.currentUserId,
+    required this.store,
+    required this.initiallyExpanded,
+    required this.emptyLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ExpansionTile(
+      initiallyExpanded: initiallyExpanded,
+      title: Row(
+        children: [
+          Text(title, style: theme.textTheme.titleMedium),
+          const SizedBox(width: 8),
+          Text('${tasks.length}', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        ],
+      ),
+      children: tasks.isEmpty
+          ? [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    emptyLabel,
+                    style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                ),
+              ),
+            ]
+          : [
+              for (final task in tasks)
+                TaskCard(
+                  task: task,
+                  currentUserId: currentUserId,
+                  onToggle: () => store.quickToggle(task),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => TaskDetailScreen(taskId: task.id)),
+                  ),
+                ),
+              const SizedBox(height: 4),
+            ],
     );
   }
 }
