@@ -18,7 +18,8 @@ void main() {
 class TaskTrackerApp extends StatefulWidget {
   final ThemeController themeController;
 
-  /// Overridable for tests, so they don't hit the real SQLite path.
+  /// Overridable for tests, so they don't hit the real SQLite path or
+  /// the real backend.
   final TaskStore? taskStore;
   final UserStore? userStore;
 
@@ -34,15 +35,26 @@ class TaskTrackerApp extends StatefulWidget {
 }
 
 class _TaskTrackerAppState extends State<TaskTrackerApp> {
-  late final TaskStore _taskStore = widget.taskStore ?? TaskStore();
+  // UserStore first: TaskStore needs it (effectiveUserId, login state)
+  // to load correctly, so it must already exist by the time TaskStore's
+  // own `late` initializer runs.
   late final UserStore _userStore = widget.userStore ?? UserStore();
+  late final TaskStore _taskStore = widget.taskStore ?? TaskStore(userStore: _userStore);
   final AppNavController _navController = AppNavController();
 
   @override
   void initState() {
     super.initState();
-    _taskStore.load();
-    _userStore.load();
+    _init();
+  }
+
+  Future<void> _init() async {
+    // UserStore resolves the local device id and restores a session (if
+    // a stored refresh token is still valid) before TaskStore loads —
+    // TaskStore needs that to know whether to seed demo data and who
+    // "effectively" owns any task it creates.
+    await _userStore.load();
+    await _taskStore.load();
     _initNotifications();
   }
 

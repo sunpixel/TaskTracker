@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/task_store_scope.dart';
+import '../data/user_store_scope.dart';
 import '../models/task.dart';
 import '../navigation/app_nav_scope.dart';
 import '../utils/sort_tasks.dart';
@@ -17,6 +18,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = TaskStoreScope.of(context);
     final navController = AppNavScope.of(context);
+    final currentUserId = UserStoreScope.of(context).effectiveUserId;
 
     if (store.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -24,9 +26,9 @@ class HomeScreen extends StatelessWidget {
 
     final pending = sortByDeadline(store.tasks.where((t) => !t.isCompleted).toList());
     final assignedToMe = pending
-        .where((t) => t.assignment == TaskAssignment.assignedToMe)
+        .where((t) => t.assignmentFor(currentUserId) == TaskAssignment.assignedToMe)
         .length;
-    final mine = pending.where((t) => t.assignment == TaskAssignment.mine).length;
+    final mine = pending.where((t) => t.assignmentFor(currentUserId) == TaskAssignment.mine).length;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Home')),
@@ -80,9 +82,10 @@ class HomeScreen extends StatelessWidget {
                 final task = pending[index];
                 return TaskCard(
                   task: task,
+                  currentUserId: currentUserId,
                   onToggle: () => store.quickToggle(task),
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => TaskDetailScreen(taskId: task.id!)),
+                    MaterialPageRoute(builder: (_) => TaskDetailScreen(taskId: task.id)),
                   ),
                 );
               },

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../data/current_user.dart';
 import '../data/user_store.dart';
+import '../models/user.dart';
 import 'user_avatar.dart';
 
 /// Lets you pick who a task is assigned to: yourself, one of your
-/// contacts, or a raw username typed in directly for someone not yet in
-/// your contacts (e.g. `alex_2232344`) — stored as-is for now; once a
-/// backend exists this would be checked against it there.
+/// contacts, or someone found by searching the server for their
+/// username (e.g. `alex_2232344`) — not in your contacts yet, but a
+/// real account, which is what a task's assignee needs to be now that
+/// there's a backend to validate it against.
 class AssigneePickerDialog extends StatefulWidget {
   final UserStore userStore;
 
@@ -19,6 +20,9 @@ class AssigneePickerDialog extends StatefulWidget {
 
 class _AssigneePickerDialogState extends State<AssigneePickerDialog> {
   final _usernameController = TextEditingController();
+  List<User>? _searchResults;
+  bool _searching = false;
+  String? _searchError;
 
   @override
   void dispose() {
@@ -26,10 +30,28 @@ class _AssigneePickerDialogState extends State<AssigneePickerDialog> {
     super.dispose();
   }
 
+  Future<void> _search() async {
+    final query = _usernameController.text.trim();
+    if (query.isEmpty) return;
+    setState(() {
+      _searching = true;
+      _searchError = null;
+    });
+    final results = await widget.userStore.searchUsers(query);
+    if (!mounted) return;
+    setState(() {
+      _searching = false;
+      _searchResults = results;
+      if (results.isEmpty) _searchError = 'No matching user found.';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final contacts = widget.userStore.contacts;
+    final isLoggedIn = widget.userStore.isLoggedIn;
+    final me = widget.userStore.currentUser;
 
     return AlertDialog(
       title: const Text('Assign to'),
@@ -42,9 +64,9 @@ class _AssigneePickerDialogState extends State<AssigneePickerDialog> {
             children: [
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const UserAvatar(radius: 18),
+                leading: UserAvatar(imageBytes: me?.profilePicture, radius: 18),
                 title: const Text('Myself'),
-                onTap: () => Navigator.of(context).pop(currentUserId),
+                onTap: () => Navigator.of(context).pop(widget.userStore.effectiveUserId),
               ),
               if (contacts.isNotEmpty) const Divider(),
               for (final contact in contacts)
@@ -53,30 +75,53 @@ class _AssigneePickerDialogState extends State<AssigneePickerDialog> {
                   leading: UserAvatar(imageBytes: contact.profilePicture, radius: 18),
                   title: Text(contact.userName),
                   subtitle: contact.fullName != null ? Text(contact.fullName!) : null,
-                  onTap: () => Navigator.of(context).pop(contact.userName),
+                  onTap: () => Navigator.of(context).pop(contact.id),
                 ),
               const Divider(),
               Text(
-                'Not in your contacts? Enter their username:',
+                isLoggedIn
+                    ? 'Not in your contacts? Search by username:'
+                    : 'Log in to search for other accounts.',
                 style: theme.textTheme.bodySmall,
               ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _usernameController,
-                      decoration: const InputDecoration(hintText: 'username'),
-                      onSubmitted: (value) => _useTyped(context, value),
+              if (isLoggedIn) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _usernameController,
+                        decoration: const InputDecoration(hintText: 'username'),
+                        onSubmitted: (_) => _search(),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: () => _useTyped(context, _usernameController.text),
-                    child: const Text('Use'),
-                  ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: _searching ? null : _search,
+                      child: const Text('Search'),
+                    ),
+                  ],
+                ),
+                if (_searching) ...[
+                  const SizedBox(height: 12),
+                  const Center(child: CircularProgressIndicator()),
                 ],
-              ),
+                if (_searchError != null) ...[
+                  const SizedBox(height: 8),
+                  Text(_searchError!, style: TextStyle(color: theme.colorScheme.error)),
+                ],
+                if (_searchResults != null && _searchResults!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  for (final user in _searchResults!)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: UserAvatar(imageBytes: user.profilePicture, radius: 18),
+                      title: Text(user.userName),
+                      subtitle: user.fullName != null ? Text(user.fullName!) : null,
+                      onTap: () => Navigator.of(context).pop(user.id),
+                    ),
+                ],
+              ],
             ],
           ),
         ),
@@ -88,11 +133,5 @@ class _AssigneePickerDialogState extends State<AssigneePickerDialog> {
         ),
       ],
     );
-  }
-
-  void _useTyped(BuildContext context, String value) {
-    final trimmed = value.trim();
-    if (trimmed.isEmpty) return;
-    Navigator.of(context).pop(trimmed);
   }
 }

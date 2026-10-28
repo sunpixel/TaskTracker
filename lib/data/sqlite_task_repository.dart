@@ -4,10 +4,13 @@ import '../models/task.dart';
 import '../models/task_status.dart';
 import '../utils/task_validators.dart';
 import 'app_database.dart';
-import 'seed_tasks.dart';
 import 'task_repository.dart';
 
 /// Real, persistent repository backed by the on-device SQLite DB.
+///
+/// Seeding demo data for a fresh install is TaskStore's job (it needs
+/// the current user id, which this layer has no business knowing) —
+/// see TaskStore.load.
 class SqliteTaskRepository implements TaskRepository {
   @override
   Future<List<Task>> getAll() async {
@@ -15,21 +18,22 @@ class SqliteTaskRepository implements TaskRepository {
     // Sorting by deadline urgency (no-due-date last) is done in Dart —
     // see `sort_tasks.dart` — since that needs richer logic than a plain
     // SQL ORDER BY (NULLs would otherwise sort first).
-    var rows = await db.query('tasks', orderBy: 'id ASC');
-    if (rows.isEmpty) {
-      await _seed(db);
-      rows = await db.query('tasks', orderBy: 'id ASC');
-    }
+    final rows = await db.query('tasks');
     return rows.map(Task.fromMap).toList();
   }
 
   @override
-  Future<Task> insert(Task draft) async {
+  Future<void> insert(Task draft) async {
     final error = validateDueDate(createdAt: draft.createdAt, dueAt: draft.dueAt);
     if (error != null) throw ArgumentError(error);
     final db = await AppDatabase.instance();
-    final id = await db.insert('tasks', draft.toMap());
-    return draft.withId(id);
+    await db.insert('tasks', draft.toMap());
+  }
+
+  @override
+  Future<void> upsert(Task task) async {
+    final db = await AppDatabase.instance();
+    await db.insert('tasks', task.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   @override
@@ -41,19 +45,22 @@ class SqliteTaskRepository implements TaskRepository {
   }
 
   @override
-  Future<void> updateStatus(int id, TaskStatus status) async {
+  Future<void> updateStatus(String id, TaskStatus status, {DateTime? updatedAt}) async {
     final db = await AppDatabase.instance();
     await db.update(
       'tasks',
-      {'status': status.name},
+      {
+        'status': status.name,
+        'updated_at': (updatedAt ?? DateTime.now()).millisecondsSinceEpoch,
+      },
       where: 'id = ?',
       whereArgs: [id],
     );
   }
 
-  Future<void> _seed(Database db) async {
-    for (final task in buildSeedTasks()) {
-      await db.insert('tasks', task.toMap());
-    }
+  @override
+  Future<void> delete(String id) async {
+    final db = await AppDatabase.instance();
+    await db.delete('tasks', where: 'id = ?', whereArgs: [id]);
   }
 }

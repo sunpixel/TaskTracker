@@ -1,8 +1,15 @@
 /// Lifecycle state of a [Task].
 ///
-/// Stored in SQLite as its `.name` (e.g. 'onReview'), not an int index, so
-/// the column stays readable in the DB and safe to reorder in code without
-/// corrupting existing rows.
+/// Stored *locally* in SQLite as its `.name` (e.g. 'onReview'), not an
+/// int index, so that column stays readable and safe to reorder here
+/// without corrupting existing rows.
+///
+/// The *server* (TaskTracker.Domain.Enums.TaskStatus) stores and
+/// transmits this as a plain integer ordinal, and `Task.fromServerJson`/
+/// `toServerRequestBody` rely on `.index` matching it position-for
+/// -position. The two declarations must stay in the same order —
+/// reordering only one side will silently reinterpret every task's
+/// status as the wrong value.
 ///
 /// Two different controls can change this:
 /// - The quick-toggle checkbox/button (list screens, task detail) — a

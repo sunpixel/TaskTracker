@@ -4,9 +4,14 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+// `id` is TEXT (a client-generated GUID), not an autoincrement int — it
+// has to match the server's id for the same task once synced, and a
+// GUID generated offline needs no round-trip to become "real". See
+// `models/task.dart`. `updated_at` backs last-write-wins sync merges
+// (server_sync_service.dart) and incremental pulls.
 const _createTasksTable = '''
   CREATE TABLE tasks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL,
@@ -14,26 +19,29 @@ const _createTasksTable = '''
     assignee TEXT,
     assigner TEXT,
     status TEXT NOT NULL DEFAULT 'pending',
-    categories TEXT NOT NULL DEFAULT '[]'
+    categories TEXT NOT NULL DEFAULT '[]',
+    updated_at INTEGER NOT NULL DEFAULT 0
   )
 ''';
 
+// `id` is TEXT for the same reason as tasks.id above — a real account id
+// once synced from the server, or a locally-generated placeholder id for
+// an offline-added contact that isn't a found/real account.
 // `is_me` distinguishes the single local "you" row from contact rows —
 // not in the originally requested column list, but needed to tell them
-// apart within one shared table. `password` is nullable here even though
-// it's required for your own account: that's enforced by the sign-up
-// form, not the schema, since a contact row should never hold one.
+// apart within one shared table. No `password` column anymore — auth
+// happens against the real backend now (see UserStore), so this table is
+// purely a cached profile, never a credential.
 // `profile_picture` defaults to NULL rather than a literal default blob —
 // the app treats NULL as "show the built-in placeholder icon", which is
 // simpler and just as effective as a real stored default image.
 const _createUsersTable = '''
   CREATE TABLE users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY,
     user_name TEXT NOT NULL UNIQUE,
     full_name TEXT,
     email TEXT NOT NULL,
     phone TEXT,
-    password TEXT,
     profile_picture BLOB,
     description TEXT,
     is_me INTEGER NOT NULL DEFAULT 0
@@ -70,7 +78,7 @@ class AppDatabase {
 
     final db = await openDatabase(
       dbPath,
-      version: 3,
+      version: 4,
       onCreate: (db, version) async {
         await db.execute(_createTasksTable);
         await db.execute(_createUsersTable);
@@ -84,6 +92,15 @@ class AppDatabase {
         }
         if (oldVersion < 3) {
           // Purely additive — existing task data is left alone.
+          await db.execute(_createUsersTable);
+        }
+        if (oldVersion < 4) {
+          // Breaking: id columns moved from INTEGER to TEXT (GUIDs) for
+          // server sync — no existing local data is salvageable across
+          // that type change, so both tables are rebuilt from scratch.
+          await db.execute('DROP TABLE IF EXISTS tasks');
+          await db.execute(_createTasksTable);
+          await db.execute('DROP TABLE IF EXISTS users');
           await db.execute(_createUsersTable);
         }
       },

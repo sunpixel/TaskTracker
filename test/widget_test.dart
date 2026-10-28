@@ -5,18 +5,30 @@ import 'package:task_tracker/data/in_memory_user_repository.dart';
 import 'package:task_tracker/data/task_store.dart';
 import 'package:task_tracker/data/user_store.dart';
 import 'package:task_tracker/main.dart';
+import 'package:task_tracker/services/auth_token_store.dart';
+import 'package:task_tracker/services/key_value_store.dart';
+import 'package:task_tracker/services/local_identity.dart';
 import 'package:task_tracker/theme/theme_controller.dart';
 
 void main() {
   testWidgets('App starts on Home and can navigate to Tasks and Profile',
       (WidgetTester tester) async {
-    // Use the in-memory repositories rather than the real SQLite ones, so
-    // this test doesn't depend on a native sqlite3 library being present
-    // on the test host.
+    // In-memory repositories/storage rather than the real SQLite DB or
+    // secure storage, so this test doesn't depend on native plugin
+    // channels that aren't mocked under `flutter test` (sqflite,
+    // flutter_secure_storage). No server call happens either: UserStore
+    // only calls the API when a stored refresh token exists, and this
+    // store starts with none — logged-out stays fully offline, by design.
+    final userStore = UserStore(
+      repository: InMemoryUserRepository(),
+      tokenStore: AuthTokenStore(storage: InMemoryKeyValueStore()),
+      localIdentity: LocalIdentity(storage: InMemoryKeyValueStore()),
+    );
+
     await tester.pumpWidget(TaskTrackerApp(
       themeController: ThemeController(),
-      taskStore: TaskStore(repository: InMemoryTaskRepository()),
-      userStore: UserStore(repository: InMemoryUserRepository()),
+      taskStore: TaskStore(userStore: userStore, repository: InMemoryTaskRepository()),
+      userStore: userStore,
     ));
     await tester.pumpAndSettle();
 

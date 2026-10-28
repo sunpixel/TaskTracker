@@ -1,25 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../data/user_store.dart';
-import '../models/user.dart';
 
-/// Combined log in / sign up dialog.
-///
-/// There's no backend yet — this only checks against (or creates) a
-/// single local "me" profile on this device. Starts in sign-up mode if
-/// no local account exists yet, log-in mode otherwise.
+/// Combined log in / sign up dialog, against the real backend now.
 class AuthDialog extends StatefulWidget {
   final UserStore store;
-  final bool startInSignUpMode;
 
-  const AuthDialog({super.key, required this.store, required this.startInSignUpMode});
+  const AuthDialog({super.key, required this.store});
 
   @override
   State<AuthDialog> createState() => _AuthDialogState();
 }
 
 class _AuthDialogState extends State<AuthDialog> {
-  late bool _signUpMode = widget.startInSignUpMode;
+  bool _signUpMode = false;
   bool _submitting = false;
   String? _error;
 
@@ -58,13 +52,13 @@ class _AuthDialogState extends State<AuthDialog> {
     });
 
     final success = _signUpMode
-        ? await widget.store.signUp(User(
+        ? await widget.store.signUp(
             userName: userName,
             password: password,
             email: _emailController.text.trim(),
             fullName: _fullNameController.text.trim().isEmpty ? null : _fullNameController.text.trim(),
             phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-          ))
+          )
         : await widget.store.login(userName, password);
 
     if (!mounted) return;

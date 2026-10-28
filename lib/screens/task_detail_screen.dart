@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 
-import '../data/current_user.dart';
 import '../data/task_store.dart';
 import '../data/task_store_scope.dart';
 import '../data/user_store.dart';
@@ -32,7 +32,7 @@ import '../widgets/user_avatar.dart';
 /// so the bottom nav bar stays visible and the back arrow returns to
 /// wherever this was opened from.
 class TaskDetailScreen extends StatefulWidget {
-  final int? taskId;
+  final String? taskId;
 
   const TaskDetailScreen({super.key, required this.taskId});
 
@@ -45,7 +45,15 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   bool _saving = false;
 
   Task? _original;
+
+  /// Generated immediately for a brand new task (a GUID, via the `uuid`
+  /// package) rather than left until save — [Task.id] is never nullable,
+  /// matching the server, which expects the client to have already
+  /// assigned one.
+  late String _id;
+
   late DateTime _createdAt;
+  late DateTime _updatedAt;
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
 
@@ -66,8 +74,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     _initialized = true;
 
     final task = _isNew ? null : TaskStoreScope.of(context).byId(widget.taskId!);
+    final currentUserId = UserStoreScope.of(context).effectiveUserId;
+
     _original = task;
+    _id = task?.id ?? const Uuid().v4();
     _createdAt = task?.createdAt ?? DateTime.now();
+    _updatedAt = task?.updatedAt ?? _createdAt;
     _titleController = TextEditingController(text: task?.title ?? '');
     _descriptionController = TextEditingController(text: task?.description ?? '');
     _assigner = task?.assigner ?? currentUserId;
@@ -84,13 +96,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     super.dispose();
   }
 
-  bool get _editable => _isNew || (_original != null && canEdit(_original!));
+  bool _editable(String currentUserId) => _isNew || (_original != null && canEdit(_original!, currentUserId));
 
   /// The task as currently drafted on screen — used both to save and to
   /// feed role-based logic (quick-toggle, Add to Calendar) that needs a
   /// [Task], even before anything is persisted.
   Task _draftTask() => Task(
-        id: _original?.id,
+        id: _id,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         createdAt: _createdAt,
@@ -99,6 +111,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         assigner: _assigner,
         status: _status,
         categories: _categories,
+        updatedAt: _updatedAt,
       );
 
   Future<void> _save(TaskStore store) async {
@@ -135,8 +148,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   /// into the same explicit Save as everything else. In read-only/view
   /// mode (not editing) it persists immediately via the store, since
   /// that's the only action available there.
-  void _handleQuickToggleEditable() {
-    setState(() => _status = nextStatusOnQuickToggle(_draftTask()));
+  void _handleQuickToggleEditable(String currentUserId) {
+    setState(() => _status = nextStatusOnQuickToggle(_draftTask(), currentUserId));
   }
 
   Future<void> _handleAddToCalendar() async {
@@ -180,17 +193,23 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   /// Resolves a stored assignee/assigner id to a display name + avatar,
-  /// using the real logged-in user (for [currentUserId]) or a matching
-  /// contact when one exists — falling back to the raw id as plain text
-  /// for a typed-in username that doesn't match anything locally yet.
-  ({String name, Uint8List? avatar}) _resolvePerson(String? id, UserStore userStore) {
+  /// using your own profile (for [currentUserId]) or a matching contact
+  /// when one exists — falling back to the raw id as plain text for a
+  /// typed-in username that doesn't match anything locally yet.
+  ({String name, Uint8List? avatar}) _resolvePerson(
+    String? id,
+    String currentUserId,
+    UserStore userStore,
+  ) {
     if (id == null) return (name: 'Unassigned', avatar: null);
     if (id == currentUserId) {
       final me = userStore.currentUser;
       return (name: me?.displayName ?? 'You', avatar: me?.profilePicture);
     }
     for (final contact in userStore.contacts) {
-      if (contact.userName == id) return (name: contact.displayName, avatar: contact.profilePicture);
+      if (contact.id == id || contact.userName == id) {
+        return (name: contact.displayName, avatar: contact.profilePicture);
+      }
     }
     return (name: id, avatar: null);
   }
@@ -199,6 +218,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Widget build(BuildContext context) {
     final store = TaskStoreScope.of(context);
     final userStore = UserStoreScope.of(context);
+    final currentUserId = userStore.effectiveUserId;
     final theme = Theme.of(context);
 
     if (!_isNew && _original == null) {
@@ -208,7 +228,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       );
     }
 
-    final editable = _editable;
+    final editable = _editable(currentUserId);
     final draft = _draftTask();
     final categorySuggestions =
         store.tasks.expand((t) => t.categories).toSet().toList()..sort();
@@ -279,11 +299,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           _InfoColumns(
             columns: [
               // Always read-only — the assigner never changes.
-              ('Assigner', _PersonCell(person: _resolvePerson(_assigner, userStore))),
+              ('Assigner', _PersonCell(person: _resolvePerson(_assigner, currentUserId, userStore))),
               (
                 'Assignee',
                 _PersonCell(
-                  person: _resolvePerson(_assignee, userStore),
+                  person: _resolvePerson(_assignee, currentUserId, userStore),
                   onTap: editable ? () => _pickAssignee(userStore) : null,
                 ),
               ),
@@ -314,10 +334,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           ],
           OutlinedButton.icon(
             onPressed: editable
-                ? _handleQuickToggleEditable
+                ? () => _handleQuickToggleEditable(currentUserId)
                 : () => store.quickToggle(_original!),
             icon: const Icon(Icons.check),
-            label: Text(quickToggleActionLabel(draft)),
+            label: Text(quickToggleActionLabel(draft, currentUserId)),
           ),
           if (editable) ...[
             const SizedBox(height: 24),

@@ -1,46 +1,111 @@
-import '../data/current_user.dart';
+import '../data/user_store.dart';
 import '../models/task.dart';
-import 'notification_service.dart';
+import 'api_client.dart';
 
-/// Single seam for everything that will eventually be a real call to the
-/// backend (the RabbitMQ-based server mentioned early on, not built yet).
+/// Raw result of a server pull: tasks to upsert locally, and ids the
+/// server has soft-deleted (see TaskTrackerServer's `deletedAt`) that
+/// should be removed from local storage entirely — there's no reason
+/// for a single device to keep a local tombstone once it's acted on it.
+class TaskSyncResult {
+  final List<Task> upserted;
+  final List<String> deletedIds;
+
+  const TaskSyncResult({required this.upserted, required this.deletedIds});
+}
+
+/// The seam between the app and the backend for everything task-related.
+/// Pure network I/O — deciding what a pull *means* for local state
+/// (merging, conflict resolution, "was this newly assigned to me")
+/// is `TaskStore`'s job; this only fetches/sends raw data.
 ///
-/// Right now there's nothing to actually call — every method here is a
-/// local stand-in for the network behavior it'll have once a server
-/// exists. The point of keeping it in one file is that swapping the
-/// insides for real HTTP/queue calls later should only ever touch this
-/// file, not every place in the app that currently calls it.
+/// Every method here is a no-op (or returns nothing) when not logged
+/// in — that's what keeps the app fully self-sufficient offline, per
+/// the original design: nothing in here is ever load-bearing for core
+/// functionality, only for multi-device sync on top of it.
 class ServerSyncService {
-  ServerSyncService._();
-  static final ServerSyncService instance = ServerSyncService._();
+  ServerSyncService({required UserStore userStore, ApiClient? apiClient})
+      : _userStore = userStore,
+        _api = apiClient ?? ApiClient();
 
-  /// Called whenever a task is saved (created or edited) that assigns it
-  /// to someone.
-  ///
-  /// TODO(server): once a backend exists, this should push the task to
-  /// the assignee's account, and it's the **server** that pushes a real
-  /// notification to their device from there — this method would then
-  /// just be the outgoing half (upload the task), with the notification
-  /// arriving separately via FCM/APNs.
-  ///
-  /// Until then, there's no one else's device to notify — so as a local
-  /// stand-in, if the save makes *you* the assignee of a task someone
-  /// else is the assigner of, this fires the "assigned to you"
-  /// notification directly, right here. It's the one scenario this can
-  /// genuinely demonstrate without a server: tasks already in your local
-  /// contacts' data (e.g. seeded demo tasks from "alex"). A task you
-  /// create yourself can never trigger this, since the assigner is
-  /// always fixed to you at creation — see `task_detail_screen.dart`.
-  Future<void> notifyTaskAssigned(Task task) async {
-    final isAssignedToMeByOther =
-        task.assignee == currentUserId && task.assigner != currentUserId;
-    if (!isAssignedToMeByOther) return;
-    await NotificationService.instance.showAssignedNotification(task);
+  final UserStore _userStore;
+  final ApiClient _api;
+
+  /// Pushes a newly-created task to the server. Best-effort: a failure
+  /// here (offline, server down) is swallowed — the local save already
+  /// happened and stays authoritative; this task will be picked up
+  /// again next time a pull reconciles state, since there's no local
+  /// "pending outbox" queue (yet) to retry it automatically.
+  Future<void> pushNewTask(Task task) async {
+    if (!_userStore.isLoggedIn) return;
+    final token = await _userStore.ensureFreshAccessToken();
+    if (token == null) return;
+    try {
+      await _api.createTask(accessToken: token, body: {
+        'id': task.id,
+        ...task.toServerRequestBody(),
+      });
+    } catch (_) {
+      // See class doc.
+    }
   }
 
-  // Natural next additions once a backend exists, kept here as a map of
-  // what this file is for — not implemented, just named:
-  // Future<void> pushTask(Task task) => ...;
-  // Future<void> pullTasksForCurrentUser() => ...;
-  // Future<List<User>> searchUsersByUsername(String query) => ...;
+  Future<void> pushTaskEdit(Task task) async {
+    if (!_userStore.isLoggedIn) return;
+    final token = await _userStore.ensureFreshAccessToken();
+    if (token == null) return;
+    try {
+      await _api.updateTask(accessToken: token, id: task.id, body: task.toServerRequestBody());
+    } catch (_) {
+      // See class doc.
+    }
+  }
+
+  Future<void> pushStatusChange(Task task) async {
+    if (!_userStore.isLoggedIn) return;
+    final token = await _userStore.ensureFreshAccessToken();
+    if (token == null) return;
+    try {
+      await _api.quickToggleTask(accessToken: token, id: task.id);
+    } catch (_) {
+      // See class doc.
+    }
+  }
+
+  Future<void> pushDelete(String taskId) async {
+    if (!_userStore.isLoggedIn) return;
+    final token = await _userStore.ensureFreshAccessToken();
+    if (token == null) return;
+    try {
+      await _api.deleteTask(accessToken: token, id: taskId);
+    } catch (_) {
+      // See class doc.
+    }
+  }
+
+  /// Fetches everything changed since [since] (or everything at all, if
+  /// `null` — e.g. right after login on a device that's never synced).
+  /// Returns an empty result (never throws) if not logged in or the
+  /// request fails — callers should treat that as "nothing new", not
+  /// as an error worth surfacing.
+  Future<TaskSyncResult> fetchChanges({DateTime? since}) async {
+    if (!_userStore.isLoggedIn) return const TaskSyncResult(upserted: [], deletedIds: []);
+    final token = await _userStore.ensureFreshAccessToken();
+    if (token == null) return const TaskSyncResult(upserted: [], deletedIds: []);
+
+    try {
+      final raw = await _api.getTasks(accessToken: token, since: since);
+      final upserted = <Task>[];
+      final deletedIds = <String>[];
+      for (final json in raw.cast<Map<String, dynamic>>()) {
+        if (Task.isDeletedInServerJson(json)) {
+          deletedIds.add(json['id'] as String);
+        } else {
+          upserted.add(Task.fromServerJson(json));
+        }
+      }
+      return TaskSyncResult(upserted: upserted, deletedIds: deletedIds);
+    } catch (_) {
+      return const TaskSyncResult(upserted: [], deletedIds: []);
+    }
+  }
 }

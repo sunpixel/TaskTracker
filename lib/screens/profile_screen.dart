@@ -17,11 +17,9 @@ class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key, required this.themeController});
 
   Future<void> _openAuthDialog(BuildContext context, UserStore store) async {
-    final hasAccount = await store.hasLocalAccount();
-    if (!context.mounted) return;
     await showDialog<void>(
       context: context,
-      builder: (context) => AuthDialog(store: store, startInSignUpMode: !hasAccount),
+      builder: (context) => AuthDialog(store: store),
     );
   }
 
@@ -85,13 +83,10 @@ class _ContactsSection extends StatelessWidget {
   const _ContactsSection({required this.store});
 
   Future<void> _addContact(BuildContext context) async {
-    final result = await showDialog<User>(
+    await showDialog<void>(
       context: context,
-      builder: (context) => const AddContactDialog(),
+      builder: (context) => AddContactDialog(userStore: store),
     );
-    if (result != null) {
-      await store.addContact(result);
-    }
   }
 
   @override
@@ -154,7 +149,7 @@ class _ContactRow extends StatelessWidget {
       ),
     );
     if (confirmed == true) {
-      await store.deleteContact(contact.id!);
+      await store.deleteContact(contact.id);
     }
   }
 

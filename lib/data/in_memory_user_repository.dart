@@ -1,39 +1,40 @@
 import '../models/user.dart';
 import 'user_repository.dart';
 
-/// Pure-Dart fallback — no `dart:io` — used on Web and in tests. Seeded
-/// with one demo contact ("alex") matching the placeholder id already
-/// used in `seed_tasks.dart`, so the Contacts list isn't empty out of
-/// the box.
+/// Pure-Dart fallback — no `dart:io` — used on Web and in tests.
 class InMemoryUserRepository implements UserRepository {
   User? _me;
-  final List<User> _contacts = [
-    const User(id: 1, userName: 'alex', fullName: 'Alex', email: 'alex@example.com'),
-  ];
-  int _nextId = 2;
+  final List<User> _contacts = [];
 
   @override
   Future<User?> getMe() async => _me;
 
   @override
+  Future<void> upsertMe(User user) async {
+    _me = user.copyWith(isMe: true);
+  }
+
+  @override
+  Future<void> clearMe() async {
+    _me = null;
+  }
+
+  @override
   Future<List<User>> getContacts() async => List.of(_contacts);
 
   @override
-  Future<User> upsertMe(User user) async {
-    final me = user.withId(_me?.id ?? _nextId++).copyWith(isMe: true);
-    _me = me;
-    return me;
+  Future<void> upsertContact(User contact) async {
+    final index = _contacts.indexWhere((c) => c.id == contact.id);
+    final withFlag = contact.copyWith(isMe: false);
+    if (index == -1) {
+      _contacts.add(withFlag);
+    } else {
+      _contacts[index] = withFlag;
+    }
   }
 
   @override
-  Future<User> addContact(User contact) async {
-    final withId = contact.withId(_nextId++).copyWith(isMe: false);
-    _contacts.add(withId);
-    return withId;
-  }
-
-  @override
-  Future<void> deleteContact(int id) async {
+  Future<void> deleteContact(String id) async {
     _contacts.removeWhere((c) => c.id == id);
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/task_store_scope.dart';
+import '../data/user_store_scope.dart';
 import '../navigation/app_nav_controller.dart';
 import '../navigation/app_nav_scope.dart';
 import '../utils/sort_tasks.dart';
@@ -14,6 +15,9 @@ import 'task_detail_screen.dart';
 /// time, mixing assignment ("Assigned to me" / "Mine") and category into a
 /// single row. This is the first iteration — multi-select, search, and
 /// sorting are natural next steps once the design settles.
+///
+/// Pull-to-refresh here is one of the three sync triggers (alongside
+/// right-after-any-push and the 10-minute timer) — see `TaskStore`.
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
 
@@ -63,6 +67,7 @@ class _TasksScreenState extends State<TasksScreen> {
   Widget build(BuildContext context) {
     final store = TaskStoreScope.of(context);
     final nav = AppNavScope.of(context);
+    final currentUserId = UserStoreScope.of(context).effectiveUserId;
 
     if (store.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -77,7 +82,9 @@ class _TasksScreenState extends State<TasksScreen> {
       for (final category in categories) TaskFilter.category(category, category),
     ];
 
-    final filtered = sortByDeadline(allTasks.where(_selected.matches).toList());
+    final filtered = sortByDeadline(
+      allTasks.where((t) => _selected.matches(t, currentUserId)).toList(),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -101,24 +108,36 @@ class _TasksScreenState extends State<TasksScreen> {
           ),
           const Divider(height: 1),
           Expanded(
-            child: filtered.isEmpty
-                ? const Center(child: Text('No tasks match this filter.'))
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: filtered.length,
-                    itemBuilder: (context, index) {
-                      final task = filtered[index];
-                      return TaskCard(
-                        task: task,
-                        onToggle: () => store.quickToggle(task),
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => TaskDetailScreen(taskId: task.id!),
+            child: RefreshIndicator(
+              onRefresh: store.pullFromServer,
+              child: filtered.isEmpty
+                  ? ListView(
+                      // A plain Center() can't be pulled-to-refresh —
+                      // RefreshIndicator needs a scrollable child even
+                      // for the empty state.
+                      children: const [
+                        SizedBox(height: 120),
+                        Center(child: Text('No tasks match this filter.')),
+                      ],
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        final task = filtered[index];
+                        return TaskCard(
+                          task: task,
+                          currentUserId: currentUserId,
+                          onToggle: () => store.quickToggle(task),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => TaskDetailScreen(taskId: task.id),
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
+            ),
           ),
         ],
       ),

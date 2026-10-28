@@ -14,6 +14,7 @@ import '../utils/task_urgency.dart';
 /// falls back to it.
 class TaskCard extends StatelessWidget {
   final Task task;
+  final String currentUserId;
 
   /// Called when the quick-toggle checkbox is tapped. What it actually
   /// does depends on the current user's role on the task — see
@@ -26,6 +27,7 @@ class TaskCard extends StatelessWidget {
   const TaskCard({
     super.key,
     required this.task,
+    required this.currentUserId,
     this.onToggle,
     this.onTap,
   });
@@ -54,7 +56,7 @@ class TaskCard extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         leading: Checkbox(
           tristate: true,
-          value: quickToggleValue(task),
+          value: quickToggleValue(task, currentUserId),
           onChanged: onToggle == null ? null : (_) => onToggle!(),
         ),
         title: Text(

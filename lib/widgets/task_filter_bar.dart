@@ -31,8 +31,8 @@ class TaskFilter {
 
   const TaskFilter.category(this.category, this.label) : assignment = null;
 
-  bool matches(Task task) {
-    if (assignment != null) return task.assignment == assignment;
+  bool matches(Task task, String currentUserId) {
+    if (assignment != null) return task.assignmentFor(currentUserId) == assignment;
     if (category != null) return task.categories.contains(category);
     return true; // "All"
   }

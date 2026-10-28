@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
@@ -91,17 +93,32 @@ class NotificationService {
     await iosPlugin?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
-  int _sixHourReminderId(int taskId) => taskId * 10 + 1;
-  int _oneHourReminderId(int taskId) => taskId * 10 + 2;
+  /// flutter_local_notifications needs a plain int id, but a task's id
+  /// is a GUID string — this derives a stable one from it (FNV-1a, not
+  /// Dart's `String.hashCode`, which isn't guaranteed stable across runs)
+  /// so the *same* task always maps to the *same* notification id,
+  /// letting it be rescheduled/cancelled correctly later. Masked to 28
+  /// bits so `* 4 + 0..3` below still fits a 32-bit signed int.
+  int _baseNotificationId(String taskId) {
+    const prime = 0x01000193;
+    var hash = 0x811c9dc5;
+    for (final byte in utf8.encode(taskId)) {
+      hash ^= byte;
+      hash = (hash * prime) & 0xFFFFFFFF;
+    }
+    return hash & 0x0FFFFFFF;
+  }
+
+  int _sixHourReminderId(String taskId) => _baseNotificationId(taskId) * 4 + 1;
+  int _oneHourReminderId(String taskId) => _baseNotificationId(taskId) * 4 + 2;
+  int _assignedNotificationId(String taskId) => _baseNotificationId(taskId) * 4 + 3;
 
   /// (Re)schedules the 6h-before and 1h-before reminders for [task],
   /// replacing any previously scheduled ones for it first. Clears them
   /// (and schedules nothing new) if the task has no due date, is already
   /// completed, or a given reminder time has already passed.
   Future<void> scheduleDueReminders(Task task) async {
-    final id = task.id;
-    if (id == null) return;
-    await cancelDueReminders(id);
+    await cancelDueReminders(task.id);
 
     final due = task.dueAt;
     if (due == null || task.isCompleted) return;
@@ -112,7 +129,7 @@ class NotificationService {
 
     if (sixHoursBefore.isAfter(now)) {
       await _scheduleAt(
-        id: _sixHourReminderId(id),
+        id: _sixHourReminderId(task.id),
         when: sixHoursBefore,
         title: '"${task.title}" is due in 6 hours',
         channel: _dueChannel,
@@ -122,7 +139,7 @@ class NotificationService {
     }
     if (oneHourBefore.isAfter(now)) {
       await _scheduleAt(
-        id: _oneHourReminderId(id),
+        id: _oneHourReminderId(task.id),
         when: oneHourBefore,
         title: '"${task.title}" is due in 1 hour',
         channel: _urgentChannel,
@@ -135,7 +152,7 @@ class NotificationService {
     }
   }
 
-  Future<void> cancelDueReminders(int taskId) async {
+  Future<void> cancelDueReminders(String taskId) async {
     await _plugin.cancel(id: _sixHourReminderId(taskId));
     await _plugin.cancel(id: _oneHourReminderId(taskId));
   }
@@ -175,7 +192,7 @@ class NotificationService {
   /// `server_sync_service.dart` — see that file.
   Future<void> showAssignedNotification(Task task) async {
     await _plugin.show(
-      id: task.id ?? 0,
+      id: _assignedNotificationId(task.id),
       title: 'New task assigned to you',
       body: task.title,
       notificationDetails: NotificationDetails(

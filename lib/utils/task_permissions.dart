@@ -12,23 +12,31 @@
 ///   someone else): I can only flag my part done or undo that — toggling
 ///   moves between pending and [TaskStatus.onReview]. Only the assigner
 ///   can mark it [TaskStatus.completed].
+///
+/// Every function here takes [currentUserId] explicitly — whoever is
+/// effectively "you" right now (your real account if logged in,
+/// otherwise the stable local-device id; see `UserStore.effectiveUserId`)
+/// — rather than reading a global, since that's no longer a fixed
+/// constant now that real accounts exist. The server
+/// (TaskAuthorization.cs) independently re-derives the same rules from
+/// the authenticated caller — this copy is a UX nicety, not enforcement.
 library;
 
-import '../data/current_user.dart';
 import '../models/task.dart';
 import '../models/task_status.dart';
 
-bool _isDelegatedToMe(Task task) =>
+bool _isDelegatedToMe(Task task, String currentUserId) =>
     task.assignee == currentUserId && task.assigner != currentUserId;
 
-/// Whether the current user is allowed to edit [task]'s fields at all —
+/// Whether [currentUserId] is allowed to edit [task]'s fields at all —
 /// only its assigner can.
-bool canEdit(Task task) => task.assigner == null || task.assigner == currentUserId;
+bool canEdit(Task task, String currentUserId) =>
+    task.assigner == null || task.assigner == currentUserId;
 
 /// The status [task] should move to if its quick-toggle is tapped right
-/// now, given the current user's role on it.
-TaskStatus nextStatusOnQuickToggle(Task task) {
-  if (_isDelegatedToMe(task)) {
+/// now, given [currentUserId]'s role on it.
+TaskStatus nextStatusOnQuickToggle(Task task, String currentUserId) {
+  if (_isDelegatedToMe(task, currentUserId)) {
     return task.status == TaskStatus.onReview ? TaskStatus.pending : TaskStatus.onReview;
   }
   // Self task, or I'm the assigner (delegated to someone else, or both).
@@ -37,16 +45,16 @@ TaskStatus nextStatusOnQuickToggle(Task task) {
 
 /// What the quick-toggle checkbox should show for [task]: `true` checked,
 /// `false` unchecked, `null` indeterminate (used for "on review").
-bool? quickToggleValue(Task task) {
+bool? quickToggleValue(Task task, String currentUserId) {
   if (task.status == TaskStatus.completed) return true;
-  if (_isDelegatedToMe(task) && task.status == TaskStatus.onReview) return null;
+  if (_isDelegatedToMe(task, currentUserId) && task.status == TaskStatus.onReview) return null;
   return false;
 }
 
 /// Label for the quick-toggle action button on the task detail screen,
 /// matching what [nextStatusOnQuickToggle] is about to do.
-String quickToggleActionLabel(Task task) {
-  if (_isDelegatedToMe(task)) {
+String quickToggleActionLabel(Task task, String currentUserId) {
+  if (_isDelegatedToMe(task, currentUserId)) {
     return task.status == TaskStatus.onReview ? 'Back to pending' : 'Mark my part done';
   }
   return task.isCompleted ? 'Mark as pending' : 'Mark as complete';
