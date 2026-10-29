@@ -52,6 +52,19 @@ const _createUsersTable = '''
   )
 ''';
 
+// The offline outbox (see `pending_changes_repository.dart`) — at most
+// one row per task, durable across restarts, which is what makes a
+// task created entirely offline actually reach the server once a
+// connection comes back, instead of the old design where a push that
+// failed once was simply never retried.
+const _createPendingChangesTable = '''
+  CREATE TABLE pending_changes (
+    task_id TEXT PRIMARY KEY,
+    change_type TEXT NOT NULL,
+    enqueued_at INTEGER NOT NULL
+  )
+''';
+
 /// Opens (creating on first run) the local SQLite database used to cache
 /// tasks and local user/contact data on-device. Native platforms only —
 /// see `task_repository.dart`/`user_repository.dart`'s conditional
@@ -82,10 +95,11 @@ class AppDatabase {
 
     final db = await openDatabase(
       dbPath,
-      version: 5,
+      version: 6,
       onCreate: (db, version) async {
         await db.execute(_createTasksTable);
         await db.execute(_createUsersTable);
+        await db.execute(_createPendingChangesTable);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -111,6 +125,11 @@ class AppDatabase {
           // Purely additive — existing user/contact rows just get a NULL
           // country code until re-synced from the server.
           await db.execute('ALTER TABLE users ADD COLUMN country_code INTEGER');
+        }
+        if (oldVersion < 6) {
+          // New table, purely additive — nothing pending exists yet on
+          // an upgrading install, so there's nothing to migrate into it.
+          await db.execute(_createPendingChangesTable);
         }
       },
     );

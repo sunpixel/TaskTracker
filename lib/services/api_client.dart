@@ -152,6 +152,23 @@ class ApiClient {
     _checkOk(res);
   }
 
+  /// Replays a backlog of offline-queued task changes as one request —
+  /// see `pending_changes_repository.dart`/`TaskStore._drainPendingChanges`.
+  /// Each entry in [items] is one of the shapes `POST /tasks/batch`
+  /// expects (`{type, id, ...}` — see the server's `BatchTaskItem`).
+  /// Returns the raw per-item `results` array; one item failing doesn't
+  /// throw, since the whole point is that some may succeed while others
+  /// don't.
+  Future<List<dynamic>> batchTasks({required String accessToken, required List<Map<String, dynamic>> items}) async {
+    final res = await _http.post(
+      _uri('/tasks/batch'),
+      headers: _headers(accessToken),
+      body: jsonEncode({'items': items}),
+    );
+    final decoded = _decodeMap(res);
+    return decoded['results'] as List<dynamic>? ?? [];
+  }
+
   // --- Contacts ---
 
   Future<List<dynamic>> getContacts({required String accessToken}) async {

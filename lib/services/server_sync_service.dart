@@ -2,6 +2,23 @@ import '../data/user_store.dart';
 import '../models/task.dart';
 import 'api_client.dart';
 
+/// One item's outcome from a `pushBatch` call. [isDefinitiveRejection]
+/// distinguishes "the server told us flatly no, stop asking"
+/// (not_found/forbidden/missing_fields/unknown_type) from "something
+/// went wrong, worth trying again later" (the server's own generic
+/// per-item `"error"` marker — see `TaskEndpoints.ApplyBatchItemAsync`'s
+/// catch-all) — `TaskStore` uses this to decide whether to drop a
+/// pending change or leave it queued for the next drain.
+class BatchItemOutcome {
+  final String taskId;
+  final bool success;
+  final String? error;
+
+  const BatchItemOutcome({required this.taskId, required this.success, this.error});
+
+  bool get isDefinitiveRejection => !success && error != 'error';
+}
+
 /// Raw result of a server pull: tasks to upsert locally, and ids the
 /// server has soft-deleted (see TaskTrackerServer's `deletedAt`) that
 /// should be removed from local storage entirely — there's no reason
@@ -79,6 +96,33 @@ class ServerSyncService {
       await _api.deleteTask(accessToken: token, id: taskId);
     } catch (_) {
       // See class doc.
+    }
+  }
+
+  /// Replays a backlog of queued offline changes as a single request —
+  /// see `TaskStore._drainPendingChanges`, which builds [items] (each
+  /// already shaped the way `POST /tasks/batch` expects) from the local
+  /// outbox.
+  ///
+  /// Returns `null` if the request failed *as a whole* (offline, not
+  /// logged in, network error, rate-limited) — the caller should leave
+  /// every pending change queued and just try again later, same as
+  /// every other method here. A non-null result always has one entry
+  /// per item in [items], in order, since the server applies each item
+  /// independently rather than failing the batch over one bad entry.
+  Future<List<BatchItemOutcome>?> pushBatch(List<Map<String, dynamic>> items) async {
+    if (!_userStore.isLoggedIn) return null;
+    final token = await _userStore.ensureFreshAccessToken();
+    if (token == null) return null;
+    try {
+      final raw = await _api.batchTasks(accessToken: token, items: items);
+      return raw.cast<Map<String, dynamic>>().map((json) => BatchItemOutcome(
+            taskId: json['id'] as String,
+            success: json['success'] as bool,
+            error: json['error'] as String?,
+          )).toList();
+    } catch (_) {
+      return null;
     }
   }
 
